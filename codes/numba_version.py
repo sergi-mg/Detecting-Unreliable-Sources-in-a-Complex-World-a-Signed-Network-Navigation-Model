@@ -2,11 +2,6 @@
 """
 Created on Sat Feb 14 12:07:23 2026
 
-@author: ASUS
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Author: Sergi Martínez Galindo
 
 Random exploration of the network, eligible nodes.
