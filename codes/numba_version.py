@@ -253,7 +253,7 @@ def realization(N,k,r,update_rule):
         """
         
     #accuracy
-    q=0
+    q=0 
     
     #ground truth network
     s,J,n_a,n_n,iso=ground_truth_network(N, k)
@@ -293,7 +293,9 @@ def data_generator(N,k,r,update_rule,N_i,rule):
     name=rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))+"_"+str(N_i)+".dat"
     
     #executions
-    data=np.zeros(N_i)
+    data=np.zeros(N_i) 
+    #defect value must change in order to to know when there is no dynamics
+    #and when q=0 is the real result, pending to modify (recalculate vaues?)
     n=0
     for i in range(N_i):
         q,iso=realization(N,k,r,update_rule)

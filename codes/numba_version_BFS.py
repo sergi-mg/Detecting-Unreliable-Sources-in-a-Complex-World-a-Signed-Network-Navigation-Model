@@ -283,6 +283,8 @@ def data_generator(N,k,r,update_rule,N_i,rule):
     
     #executions
     data=np.zeros(N_i)
+    #defect value must change in order to to know when there is no dynamics
+    #and when q=0 is the real result, pending to modify (recalculate vaues?)
     n=0
     for i in range(N_i):
         q,iso=realization(N,k,r,update_rule)
