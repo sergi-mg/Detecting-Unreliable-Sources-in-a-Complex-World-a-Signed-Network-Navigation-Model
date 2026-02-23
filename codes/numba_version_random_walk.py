@@ -248,9 +248,7 @@ def realization(N,k,r,update_rule,modify):
         """
         
     #accuracy
-    q=0
-    #defect value must change in order to to know when there is no dynamics
-    #and when q=0 is the real result, pending to modify (recalculate vaues?)
+    q=-2 
     
     #ground truth network
     s,J,n_a,n_n,iso=ground_truth_network(N, k)

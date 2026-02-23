@@ -71,8 +71,15 @@ def statistics_matrix(rule,k_values,r_values,N,N_i):
             file_name=\
             rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))+"_"+str(N_i)+".dat"
             q=np.loadtxt(fname=directory+file_name,dtype="float64")
+            delete=np.size(np.where(q<-1.5)[0])
+            new_q=np.zeros(np.size(q)-delete)
+            counter=0
+            for k in range(np.size(q)):
+                if q[k]>-1.5:
+                    new_q[counter]=q[i]
+                    counter+=1
             #mean and sigma calculus
-            mean[i,j],sigma[i,j]=statistics(q)
+            mean[i,j],sigma[i,j]=statistics(new_q)
 
     return mean,sigma
 

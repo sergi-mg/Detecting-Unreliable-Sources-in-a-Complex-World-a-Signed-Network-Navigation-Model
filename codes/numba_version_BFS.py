@@ -234,7 +234,7 @@ def realization(N,k,r,update_rule):
         """
         
     #accuracy
-    q=0
+    q=-2 
     
     #ground truth network
     s,J,n_a,n_n,iso,network=ground_truth_network(N, k)
