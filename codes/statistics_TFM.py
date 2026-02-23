@@ -74,9 +74,9 @@ def statistics_matrix(rule,k_values,r_values,N,N_i):
             delete=np.size(np.where(q<-1.5)[0])
             new_q=np.zeros(np.size(q)-delete)
             counter=0
-            for k in range(np.size(q)):
-                if q[k]>-1.5:
-                    new_q[counter]=q[i]
+            for l in range(np.size(q)):
+                if q[l]>-1.5:
+                    new_q[counter]=q[l]
                     counter+=1
             #mean and sigma calculus
             mean[i,j],sigma[i,j]=statistics(new_q)
@@ -87,7 +87,9 @@ def statistics_matrix(rule,k_values,r_values,N,N_i):
 #majority rule 
 k_values=np.array([9,21,36])
 r_values=np.arange(0.05,0.51,0.05)
-A1=statistics_matrix("mr_BFS", k_values, r_values, 1000, 1000)
+N=1000
+rule="mr_rw_2"
+A1=statistics_matrix(rule, k_values, r_values, N, 1000)
 
 
 #%%
@@ -111,40 +113,43 @@ for j in range(len(k_values)):
 
 plt.xlabel(r'$r$')
 plt.ylabel(r'$\langle q \rangle$')
-plt.title('Majority Rule')
+plt.title(rule+": N="+str(N))
 plt.legend()
 plt.grid(True)
 plt.show()
 
 #%%
 #random neighbour 
-k_values=np.array([200])
+k_values=np.array([9,21,36])
 r_values=np.arange(0.05,0.51,0.05)
-A2=statistics_matrix("rn_BFS", k_values, r_values, 1000, 1000)
+N=1000
+rule="rn_rw_2"
+A2=statistics_matrix(rule, k_values, r_values, N, 1000)
 
 #%%    
 #random neighbour
-results_2=np.zeros((len(r_values)))
-d_results_2=np.zeros((len(r_values)))
-results_2[:],d_results_2[:]=xifres(A2[0][0,:],1.96*A2[1][0,:],1,-10)
+results_2=np.zeros((len(k_values),len(r_values)))
+d_results_2=np.zeros((len(k_values),len(r_values)))
+for i in range(len(k_values)):
+    results_2[i,:],d_results_2[i,:]=xifres(A2[0][i,:],1.96*A2[1][i,:],1,-10)
 
 #Plot the results
-colors = ["g"]
-linestyles = ['--']
+colors = ['b', 'g', 'r']
+linestyles = ['--', '--', '--']
 
 plt.figure(figsize=(8,5))
 
 for j in range(len(k_values)):
     k=k_values[j]
-    plt.errorbar(r_values,results_2[:],xerr=0.,yerr=d_results_2[:],
+    plt.errorbar(r_values,results_2[j,:],xerr=0.,yerr=d_results_2[j,:],
                  color=colors[j], linestyle="None",
                           marker="o", label=f'k={k}')
     x=np.arange(0.01,0.50001,0.01)
-    plt.plot(x,1000**(-2*x),label="Theoretical",color="green")
+    plt.plot(x,N**(-2*x),label="Theoretical",color=colors[j])
 
 plt.xlabel(r'$r$')
 plt.ylabel(r'$\langle q \rangle$')
-plt.title('Random Neighbour')
+plt.title(rule+": N="+str(N))
 plt.legend()
 plt.grid(True)
 plt.show()
