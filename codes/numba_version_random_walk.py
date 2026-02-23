@@ -308,38 +308,27 @@ def data_generator(N,k,r,update_rule,N_i,rule,modify):
 #only onde update per node
 k_l = [9, 21, 36]
 r_list = np.arange(0.05, 0.51, 0.05)
-
+N=500
 for j in range(len(k_l)):
     k=k_l[j]
     print(k)
     for i in range(10):
         r=i/20+0.05
-        data_generator(1000, k, r, update_majority, 1000, "mr_rw", False)
+        #data_generator(N, k, r, update_majority, 1000, "mr_rw", False)
+        data_generator(N, k, r, update_rn, 1000, "rn_rw", False)
         
-k_l=[200]
-for j in range(len(k_l)):
-    k=k_l[j]
-    print(k)
-    for i in range(10):
-        r=i/20+0.05
-        data_generator(1000, k, r, update_rn, 1000, "rn_rw", False)
+
+        
         
 #%%
 #each node updated every time that is visited
 k_l = [9, 21, 36]
 r_list = np.arange(0.05, 0.51, 0.05)
-
+N=500
 for j in range(len(k_l)):
     k=k_l[j]
     print(k)
     for i in range(10):
         r=i/20+0.05
-        data_generator(1000, k, r, update_majority, 1000, "mr_rw_2", True)
-        
-k_l=[200]
-for j in range(len(k_l)):
-    k=k_l[j]
-    print(k)
-    for i in range(10):
-        r=i/20+0.05
-        data_generator(1000, k, r, update_rn, 1000, "rn_rw_2", True)
+        #data_generator(N, k, r, update_majority, 1000, "mr_rw", True)
+        data_generator(N, k, r, update_rn, 1000, "rn_rw_2", True)
