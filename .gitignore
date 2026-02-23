@@ -218,3 +218,6 @@ data/
 images/
 *.pdf
 
+#papers
+used_bibliography/
+
