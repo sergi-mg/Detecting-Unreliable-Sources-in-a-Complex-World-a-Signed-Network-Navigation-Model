@@ -217,6 +217,7 @@ data/
 #images
 images/
 *.pdf
+*.png
 
 #papers
 used_bibliography/
