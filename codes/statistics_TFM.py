@@ -87,69 +87,66 @@ def statistics_matrix(rule,k_values,r_values,N,N_i):
 #majority rule 
 k_values=np.array([9,21,36])
 r_values=np.arange(0.05,0.51,0.05)
-N=1000
-rule="mr_rw_2"
-A1=statistics_matrix(rule, k_values, r_values, N, 1000)
-
-
-#%%
-#majority rule
-results_1=np.zeros((len(k_values),len(r_values)))
-d_results_1=np.zeros((len(k_values),len(r_values)))
-for i in range(len(k_values)):
-    results_1[i,:],d_results_1[i,:]=xifres(A1[0][i,:],1.96*A1[1][i,:],1,-10)
-
-# Plot the results
-colors = ['b', 'g', 'r']
-linestyles = ['--', '--', '--']
-
-plt.figure(figsize=(8,5))
-
-for j in range(len(k_values)):
-    k=k_values[j]
-    plt.errorbar(r_values,results_1[j,:],xerr=0.,yerr=d_results_1[j,:],
-                 color=colors[j], linestyle=linestyles[j],
-                          marker="o", label=f'k={k}')
-
-plt.xlabel(r'$r$')
-plt.ylabel(r'$\langle q \rangle$')
-plt.title(rule+": N="+str(N))
-plt.legend()
-plt.grid(True)
-plt.show()
+for N in np.array([100,500,1000],dtype=int):
+    print(N)
+    for rule in ["mr","mr_BFS","mr_rw","mr_rw_2"]:
+        #majority rule
+        A1=statistics_matrix(rule, k_values, r_values, N, 1000)
+        results_1=np.zeros((len(k_values),len(r_values)))
+        d_results_1=np.zeros((len(k_values),len(r_values)))
+        for i in range(len(k_values)):
+            results_1[i,:],d_results_1[i,:]=xifres(A1[0][i,:],1.96*A1[1][i,:],1,-10)
+        
+        # Plot the results
+        colors = ['b', 'g', 'r']
+        linestyles = ['--', '--', '--']
+        
+        plt.figure(figsize=(8,5))
+        
+        for j in range(len(k_values)):
+            k=k_values[j]
+            plt.errorbar(r_values,results_1[j,:],xerr=0.,yerr=d_results_1[j,:],
+                         color=colors[j], linestyle=linestyles[j],
+                                  marker="o", label=f'k={k}')
+        
+        plt.xlabel(r'$r$')
+        plt.ylabel(r'$\langle q \rangle$')
+        plt.title(rule+": N="+str(N))
+        plt.ylim(-0.05,1.05)
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
 #%%
 #random neighbour 
 k_values=np.array([9,21,36])
 r_values=np.arange(0.05,0.51,0.05)
-N=1000
-rule="rn_rw_2"
-A2=statistics_matrix(rule, k_values, r_values, N, 1000)
-
-#%%    
-#random neighbour
-results_2=np.zeros((len(k_values),len(r_values)))
-d_results_2=np.zeros((len(k_values),len(r_values)))
-for i in range(len(k_values)):
-    results_2[i,:],d_results_2[i,:]=xifres(A2[0][i,:],1.96*A2[1][i,:],1,-10)
-
-#Plot the results
-colors = ['b', 'g', 'r']
-linestyles = ['--', '--', '--']
-
-plt.figure(figsize=(8,5))
-
-for j in range(len(k_values)):
-    k=k_values[j]
-    plt.errorbar(r_values,results_2[j,:],xerr=0.,yerr=d_results_2[j,:],
-                 color=colors[j], linestyle="None",
-                          marker="o", label=f'k={k}')
-    x=np.arange(0.01,0.50001,0.01)
-    plt.plot(x,N**(-2*x),label="Theoretical",color=colors[j])
-
-plt.xlabel(r'$r$')
-plt.ylabel(r'$\langle q \rangle$')
-plt.title(rule+": N="+str(N))
-plt.legend()
-plt.grid(True)
-plt.show()
+for N in np.array([100,500,1000],dtype=int):
+    for rule in ["rn","rn_BFS","rn_rw","rn_rw_2"]:
+        A2=statistics_matrix(rule, k_values, r_values, N, 1000)
+        results_2=np.zeros((len(k_values),len(r_values)))
+        d_results_2=np.zeros((len(k_values),len(r_values)))
+        for i in range(len(k_values)):
+            results_2[i,:],d_results_2[i,:]=xifres(A2[0][i,:],1.96*A2[1][i,:],1,-10)
+        
+        #Plot the results
+        colors = ['b', 'g', 'r']
+        linestyles = ['--', '--', '--']
+        
+        plt.figure(figsize=(8,5))
+        
+        for j in range(len(k_values)):
+            k=k_values[j]
+            plt.errorbar(r_values,results_2[j,:],xerr=0.,yerr=d_results_2[j,:],
+                         color=colors[j], linestyle="None",
+                                  marker="o", label=f'k={k}')
+            x=np.arange(0.01,0.50001,0.01)
+            plt.plot(x,N**(-2*x),label="Theoretical",color=colors[j])
+        
+        plt.xlabel(r'$r$')
+        plt.ylabel(r'$\langle q \rangle$')
+        plt.ylim(-0.05,1.05)
+        plt.title(rule+": N="+str(N))
+        plt.legend()
+        plt.grid(True)
+        plt.show()
