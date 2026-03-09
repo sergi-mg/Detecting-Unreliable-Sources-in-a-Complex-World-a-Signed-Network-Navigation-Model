@@ -23,6 +23,11 @@ directory_save="../images/time_evo/"
 if not exists(directory_save):
     makedirs(directory_save)
     
+if not exists(directory_save+"pdf/"):
+    makedirs(directory_save+"pdf/")
+if not exists(directory_save+"png/"):
+    makedirs(directory_save+"png/")
+    
 #%%    
 def create_plot(obs_1,obs_2,obs_3,directory_s,N,rule):
 
@@ -54,8 +59,10 @@ def create_plot(obs_1,obs_2,obs_3,directory_s,N,rule):
         plt.xlabel("t")
         plt.ylabel(labels_y[int(i/2)])
         plt.legend()
-        plt.savefig(directory_s+"_"+labels_y[int(i/2)]+"_"+name_s,\
-                    bbox_inches="tight")
+        plt.savefig(directory_s+"pdf/"+labels_y[int(i/2)]+"_"+name_s+\
+                    ".pdf",bbox_inches="tight")
+        plt.savefig(directory_s+"png/"+labels_y[int(i/2)]+"_"+name_s+\
+                    ".png",bbox_inches="tight")
         plt.grid(True)
         plt.show()
         plt.close()
@@ -64,7 +71,7 @@ def create_plot(obs_1,obs_2,obs_3,directory_s,N,rule):
 #majority rule
 
 N=1000
-k=36
+k=21
 r=0.1 
 N_i=1000
 rule="mr"

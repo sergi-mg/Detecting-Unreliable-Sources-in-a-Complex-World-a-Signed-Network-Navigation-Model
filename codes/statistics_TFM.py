@@ -98,6 +98,10 @@ for N in np.array([100,500,1000],dtype=int):
     directory_save="../images/mr/"
     if not exists(directory_save):
         makedirs(directory_save)
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")
         
     for rule in ["mr","mr_BFS","mr_rw","mr_rw_2",\
                  "rn","rn_BFS","rn_rw","rn_rw_2"]:
@@ -106,6 +110,10 @@ for N in np.array([100,500,1000],dtype=int):
             directory_save="../images/rn/"
             if not exists(directory_save):
                 makedirs(directory_save)
+            if not exists(directory_save+"pdf/"):
+                makedirs(directory_save+"pdf/")
+            if not exists(directory_save+"png/"):
+                makedirs(directory_save+"png/")
                 
         A1=statistics_matrix(rule, k_values, r_values, N, 1000)
         results_1=np.zeros((len(k_values),len(r_values)))
@@ -132,9 +140,10 @@ for N in np.array([100,500,1000],dtype=int):
         plt.grid(True)
         plt.show()
         
-        plt.savefig(directory_save+"_"+strategies[counter]+"_"+str(N),\
-                    bbox_inches="tight")
-            
+        plt.savefig(directory_save+"pdf/"+"_"+strategies[counter]+\
+                    "_"+str(N)+".pdf",bbox_inches="tight")
+        plt.savefig(directory_save+"png/"+"_"+strategies[counter]+\
+                        "_"+str(N)+".png",bbox_inches="tight")
         plt.close()
         
         counter+=1
@@ -154,6 +163,10 @@ for N in np.array([100,500,1000],dtype=int):
     directory_save="../images/mr_free/"
     if not exists(directory_save):
         makedirs(directory_save)
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")
         
     for rule in ["mr","mr_BFS","mr_rw","mr_rw_2",\
                  "rn","rn_BFS","rn_rw","rn_rw_2"]:
@@ -162,6 +175,10 @@ for N in np.array([100,500,1000],dtype=int):
             directory_save="../images/rn_free/"
             if not exists(directory_save):
                 makedirs(directory_save)
+            if not exists(directory_save+"pdf/"):
+                makedirs(directory_save+"pdf/")
+            if not exists(directory_save+"png/"):
+                makedirs(directory_save+"png/")
                 
         A1=statistics_matrix(rule, k_values, r_values, N, 1000)
         results_1=np.zeros((len(k_values),len(r_values)))
@@ -187,8 +204,10 @@ for N in np.array([100,500,1000],dtype=int):
         plt.grid(True)
         plt.show()
         
-        plt.savefig(directory_save+"_"+strategies[counter]+"_"+str(N),\
-                    bbox_inches="tight")
+        plt.savefig(directory_save+"pdf/"+"_"+strategies[counter]+\
+                    "_"+str(N)+".pdf",bbox_inches="tight")
+        plt.savefig(directory_save+"png/"+"_"+strategies[counter]+\
+                        "_"+str(N)+".png",bbox_inches="tight")
             
         plt.close()
         
@@ -223,7 +242,11 @@ for i in range(len(k_values)):
     
 directory_save="../images/compare/"
 if not exists(directory_save):
-    makedirs(directory_save)        
+    makedirs(directory_save) 
+if not exists(directory_save+"pdf/"):
+    makedirs(directory_save+"pdf/")
+if not exists(directory_save+"png/"):
+    makedirs(directory_save+"png/")       
             
 for j in range(len(k_values)):
     k=k_values[j]    
@@ -248,7 +271,9 @@ for j in range(len(k_values)):
     plt.grid(True)
     plt.ylim(-0.05,1.05)
     
-    plt.savefig(directory_save+"_K_"+str(k)+"_"+str(N),\
+    plt.savefig(directory_save+"pdf/"+"_K_"+str(k)+"_"+str(N)+".pdf",\
                 bbox_inches="tight")
+    plt.savefig(directory_save+"png/"+"_K_"+str(k)+"_"+str(N)+".png",\
+                    bbox_inches="tight")
     
     plt.close()

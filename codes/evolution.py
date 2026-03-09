@@ -546,5 +546,5 @@ def main_program(N,k,r,update_rule,N_i,rule):
     np.savetxt(directory+name, results_rw_f)
     
 #%%
-main_program(1000,36,0.1,update_majority,1000,"mr")
-main_program(1000,36,0.1,update_rn,1000,"rn")
+main_program(1000,500,0.1,update_majority,1000,"mr")
+main_program(1000,500,0.1,update_rn,1000,"rn")

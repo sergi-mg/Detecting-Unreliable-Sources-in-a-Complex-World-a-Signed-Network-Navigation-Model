@@ -311,12 +311,11 @@ def data_generator(N,k,r,update_rule,N_i,rule):
 #%%
 k_l = [9, 21, 36]
 r_list = np.arange(0.05, 0.51, 0.05)
-N=500
+N=1000
 for j in range(len(k_l)):
     k=k_l[j]
     print(k)
-    for i in range(10):
-        r=i/20+0.05
+    for r in r_list:
         data_generator(N, k, r, update_majority, 1000, "mr")
         data_generator(N, k, r, update_rn, 1000, "rn")
         

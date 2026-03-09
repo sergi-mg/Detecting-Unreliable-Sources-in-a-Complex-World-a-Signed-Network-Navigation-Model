@@ -310,10 +310,9 @@ N=500
 for j in range(len(k_l)):
     k=k_l[j]
     print(k)
-    for i in range(10):
-        r=i/20+0.05
+    for r in r_list:
         data_generator(N, k, r, update_majority, 1000, "mr_rw", False)
-        #data_generator(N, k, r, update_rn, 1000, "rn_rw", False)
+        data_generator(N, k, r, update_rn, 1000, "rn_rw", False)
         
 
         
@@ -326,7 +325,6 @@ N=500
 for j in range(len(k_l)):
     k=k_l[j]
     print(k)
-    for i in range(10):
-        r=i/20+0.05
+    for r in r_list:
         data_generator(N, k, r, update_majority, 1000, "mr_rw_2", True)
-        #data_generator(N, k, r, update_rn, 1000, "rn_rw_2", True)
+        data_generator(N, k, r, update_rn, 1000, "rn_rw_2", True)
