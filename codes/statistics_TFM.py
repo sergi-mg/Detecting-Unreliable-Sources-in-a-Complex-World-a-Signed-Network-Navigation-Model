@@ -84,6 +84,65 @@ def statistics_matrix(rule,k_values,r_values,N,N_i):
 
     return mean,sigma
 
+def compare_N(index_k,k_values,r_values,rule):
+    directory_save="../images/compare_N/"
+    if not exists(directory_save):
+        makedirs(directory_save) 
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")  
+        
+    #read the results
+    A1=statistics_matrix(rule, k_values, r_values, 100, 1000)
+    A2=statistics_matrix(rule, k_values, r_values, 500, 1000)
+    A3=statistics_matrix(rule, k_values, r_values, 1000, 1000)
+
+    results_1=np.zeros((len(k_values),len(r_values)))
+    d_results_1=np.zeros((len(k_values),len(r_values)))
+    for i in range(len(k_values)):
+        results_1[i,:],d_results_1[i,:]=xifres(A1[0][i,:],1.96*A1[1][i,:],1,-10)
+        
+    results_2=np.zeros((len(k_values),len(r_values)))
+    d_results_2=np.zeros((len(k_values),len(r_values)))
+    for i in range(len(k_values)):
+        results_2[i,:],d_results_2[i,:]=xifres(A2[0][i,:],1.96*A2[1][i,:],1,-10)
+        
+    results_3=np.zeros((len(k_values),len(r_values)))
+    d_results_3=np.zeros((len(k_values),len(r_values)))
+    for i in range(len(k_values)):
+        results_3[i,:],d_results_3[i,:]=xifres(A3[0][i,:],1.96*A3[1][i,:],1,-10)
+        
+               
+    k=k_values[index_k]    
+    # Plot the results
+    cmap=plt.get_cmap("viridis")
+
+    plt.figure(figsize=(8,5))
+
+
+    plt.errorbar(r_values,results_1[index_k,:],xerr=0.,yerr=d_results_1[index_k,:],
+                 color=cmap(0.6), linestyle="--",
+                          marker="o", label="N=100")
+    plt.errorbar(r_values,results_2[index_k,:],xerr=0.,yerr=d_results_2[index_k,:],
+                 color=cmap(0.9), linestyle="--",
+                          marker="o", label="N=500")
+    plt.errorbar(r_values,results_3[index_k,:],xerr=0.,yerr=d_results_3[index_k,:],
+                 color=cmap(0.1), linestyle="--",
+                          marker="o", label="N=1000")
+
+    plt.xlabel(r'$r$')
+    plt.ylabel(r'$\langle q \rangle$')
+    plt.legend()
+    plt.grid(True)
+    plt.ylim(-0.05,1.05)
+
+    plt.savefig(directory_save+"pdf/"+"_K_"+str(k)+"_"+rule+".pdf",\
+                bbox_inches="tight")
+    plt.savefig(directory_save+"png/"+"_K_"+str(k)+"_"+rule+".png",\
+                    bbox_inches="tight")
+
+    plt.close()
 #%%
 #same scale
     
@@ -93,7 +152,7 @@ r_values=np.arange(0.05,0.51,0.05)
 strategies=["rs","BFS","rw","rw_update"]
 
 for N in np.array([100,500,1000],dtype=int):
-    
+    theory=False
     counter=0
     directory_save="../images/mr/"
     if not exists(directory_save):
@@ -107,6 +166,7 @@ for N in np.array([100,500,1000],dtype=int):
                  "rn","rn_BFS","rn_rw","rn_rw_2"]:
         if counter==4:
             counter=0
+            theory=True
             directory_save="../images/rn/"
             if not exists(directory_save):
                 makedirs(directory_save)
@@ -127,6 +187,10 @@ for N in np.array([100,500,1000],dtype=int):
         
         plt.figure(figsize=(8,5))
         
+        if theory==True:
+            x=np.arange(0,0.501,0.005)
+            plt.plot(x,N**(-2.*x),c="black")
+            
         for j in range(len(k_values)):
             k=k_values[j]
             plt.errorbar(r_values,results_1[j,:],xerr=0.,yerr=d_results_1[j,:],
@@ -158,7 +222,7 @@ r_values=np.arange(0.05,0.51,0.05)
 strategies=["rs","BFS","rw","rw_update"]
 
 for N in np.array([100,500,1000],dtype=int):
-    
+    theory=False
     counter=0
     directory_save="../images/mr_free/"
     if not exists(directory_save):
@@ -172,6 +236,7 @@ for N in np.array([100,500,1000],dtype=int):
                  "rn","rn_BFS","rn_rw","rn_rw_2"]:
         if counter==4:
             counter=0
+            theory=True
             directory_save="../images/rn_free/"
             if not exists(directory_save):
                 makedirs(directory_save)
@@ -192,6 +257,10 @@ for N in np.array([100,500,1000],dtype=int):
         
         plt.figure(figsize=(8,5))
         
+        if theory==True:
+            x=np.arange(0,0.501,0.005)
+            plt.plot(x,N**(-2.*x),c="black",label="Theoretical")
+            
         for j in range(len(k_values)):
             k=k_values[j]
             plt.errorbar(r_values,results_1[j,:],xerr=0.,yerr=d_results_1[j,:],
@@ -255,6 +324,9 @@ for j in range(len(k_values)):
     
     plt.figure(figsize=(8,5))
     
+    x=np.arange(0,0.5001,0.005)
+    plt.plot(x,N**(-2.*x),c="black",label="Theoretical (rn)")
+    
     plt.errorbar(r_values,results_1[j,:],xerr=0.,yerr=d_results_1[j,:],
                  color=cmap(0.6), linestyle="--",
                           marker="o", label=strategies[0])
@@ -277,3 +349,20 @@ for j in range(len(k_values)):
                     bbox_inches="tight")
     
     plt.close()
+    
+#%%
+#compare N fixing k and strategy (majority rule)
+ 
+    
+k_values=np.array([9,21,36])
+r_values=np.arange(0.05,0.51,0.05)
+
+strategies=["mr","mr_BFS","mr_rw"]
+
+for s in strategies:
+    compare_N(1, k_values, r_values, s)
+    
+strategies=["rn","rn_BFS","rn_rw"]
+
+for s in strategies:
+    compare_N(1, k_values, r_values, s)    
