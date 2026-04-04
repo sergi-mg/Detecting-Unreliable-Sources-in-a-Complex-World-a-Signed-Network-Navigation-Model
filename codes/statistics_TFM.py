@@ -353,7 +353,6 @@ for j in range(len(k_values)):
 #%%
 #compare N fixing k and strategy (majority rule)
  
-    
 k_values=np.array([9,21,36])
 r_values=np.arange(0.05,0.51,0.05)
 
@@ -366,3 +365,18 @@ strategies=["rn","rn_BFS","rn_rw"]
 
 for s in strategies:
     compare_N(1, k_values, r_values, s)    
+    
+k_values=np.array([9,21,36])
+r_values=np.arange(0.05,0.51,0.05)
+
+strategies=["rn","rn_BFS","rn_rw"]
+
+#compare N fixing k and strategy (random neighbour)
+
+for s in strategies:
+    compare_N(1, k_values, r_values, s)
+    
+strategies=["rn","rn_BFS","rn_rw"]
+
+for s in strategies:
+    compare_N(1, k_values, r_values, s)   

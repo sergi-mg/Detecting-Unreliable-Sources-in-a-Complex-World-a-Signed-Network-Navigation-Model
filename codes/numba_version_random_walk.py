@@ -281,7 +281,7 @@ def data_generator(N,k,r,update_rule,N_i,rule,modify):
     from os import makedirs
     
     #folder
-    directory="../data/"
+    directory="../data/original_data/"
     if not exists(directory):
         makedirs(directory)
         

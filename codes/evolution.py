@@ -15,6 +15,7 @@ from numba import njit
 import networkx as nx
 
 #%%
+#Exploring the network
 @njit    
 def accuracy(s_t,o,N):
     """Returns the accuracy. Inputs:
@@ -117,7 +118,7 @@ def explore_nw_rw(o,J_o,update_rule,n_a,n_n,def_nodes,modify,d,s):
         iterations+=1
         if iterations>N**2:
             iterations=-10**7
-            print("Too much iterations")
+            print("More iterations than expected, the loop does not stop")
         #node selected
         i_s=n_a[i_p,np.random.randint(n_n[i_p])]
         
@@ -398,7 +399,6 @@ def observer(s,J,r,n_a,n_n):
 
 
 
-#%%
 def exploration(N,k,r,update_rule,GTN,observer_info):
     """Excutes the exploration of the network for the 3
     different exploration rules.
@@ -410,7 +410,8 @@ def exploration(N,k,r,update_rule,GTN,observer_info):
         - GTN: tupple (s,J,n_a,n_n,G)
         -observer_info: tupple (o,J_o,def_nodes,eli_nodes)
     Outputs: 
-        - observables (1,2,3): time dependant observables arrays (N,5).
+        - observables (1,2,3): time dependant observables arrays (N,5) - 
+        d(t),q_def(t),q(t),d_max(t),<d>(t).
         """
 
     #ground truth network
@@ -462,6 +463,7 @@ def exploration(N,k,r,update_rule,GTN,observer_info):
     
     return observables_1,observables_2,observables_3
 
+#%%
 @njit
 def statistics(x):
     """Returns the mean and its standard deviation of a 1D array x.
@@ -482,6 +484,9 @@ def statistics(x):
     sigma=(var)**0.5
     return xmed,sigma
 
+#%%
+
+#Averaging over the same network
 def main_program(N,k,r,update_rule,N_i,rule):
     """Executes realization N_i times and save the data at folder data.
     Inputs:
@@ -544,7 +549,206 @@ def main_program(N,k,r,update_rule,N_i,rule):
     name="time_evo_rw_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
         +"_"+str(N_i)+".dat"
     np.savetxt(directory+name, results_rw_f)
+
+#averaging over different netwroks    
+def main_program_2(N,k,r,update_rule,N_i,rule):
+    """Executes realization N_i times and save the data at folder data.
+    Inputs:
+        - N: number of nodes.
+        - k: expected number of connections per node.
+        - r: noise [0,0.5]
+        - update_rule: function.
+        - N_i: number of executions to average.
+        - rule: str of the rule to save the data file."""
     
+    
+    
+    results_r=np.zeros((N,5,N_i))
+    results_rw=np.zeros((N,5,N_i))
+    results_bfs=np.zeros((N,5,N_i))
+    
+    results_r_f=np.zeros((N,10))
+    results_rw_f=np.zeros((N,10))
+    results_bfs_f=np.zeros((N,10))
+    
+    for i in range(N_i):
+        np.random.seed(i+10)
+        GTN=ground_truth_network(N, k)
+        s,J,n_a,n_n,G=GTN
+        observer_info=observer(s, J, r, n_a, n_n)
+        obs_1,obs_2,obs_3=exploration(N, k, r, update_rule, GTN, observer_info)
+        results_r[:,:,i]=obs_1[:,:]
+        results_bfs[:,:,i]=obs_2[:,:]
+        results_rw[:,:,i]=obs_3[:,:]
+        
+    for i in range(0,10,2):
+        for j in range(N):
+            a=statistics(results_r[j,int(i/2),:])
+            results_r_f[j,i]=a[0]
+            results_r_f[j,i+1]=a[1]*1.96
+            a=statistics(results_bfs[j,int(i/2),:])
+            results_bfs_f[j,i]=a[0]
+            results_bfs_f[j,i+1]=a[1]*1.96
+            a=statistics(results_rw[j,int(i/2),:])
+            results_rw_f[j,i]=a[0]
+            results_rw_f[j,i+1]=a[1]*1.96
+    
+    from os.path import exists
+    from os import makedirs
+    
+    #folder
+    directory="../data/time_evo_2/"
+    if not exists(directory):
+        makedirs(directory)
+        
+    #save the data
+
+    name="time_evo_r_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results_r_f)
+    
+    name="time_evo_bfs_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results_bfs_f)
+    
+    name="time_evo_rw_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results_rw_f)
+
+#averaging over different networks + saving the t_min for statistics
+def main_program_3(N,k,r,update_rule,N_i,rule):
+    """Executes realization N_i times and save the data at folder data,
+    saves the time evolution and all the minima.
+    Inputs:
+        - N: number of nodes.
+        - k: expected number of connections per node.
+        - r: noise [0,0.5]
+        - update_rule: function.
+        - N_i: number of executions to average.
+        - rule: str of the rule to save the data file."""
+    
+    
+    results_r=np.zeros((N,5,N_i))
+    results_rw=np.zeros((N,5,N_i))
+    results_bfs=np.zeros((N,5,N_i))
+    
+    results_r_f=np.zeros((N,10))
+    results_rw_f=np.zeros((N,10))
+    results_bfs_f=np.zeros((N,10))
+    
+    results=np.zeros((N_i,3))
+    
+    for i in range(N_i):
+        np.random.seed(i+10)
+        GTN=ground_truth_network(N, k)
+        s,J,n_a,n_n,G=GTN
+        observer_info=observer(s, J, r, n_a, n_n)
+        obs_1,obs_2,obs_3=exploration(N, k, r, update_rule, GTN, observer_info)
+        results_r[:,:,i]=obs_1[:,:]
+        results_bfs[:,:,i]=obs_2[:,:]
+        results_rw[:,:,i]=obs_3[:,:]
+        
+        #search for the positions of the minima
+        results[i,0]=np.argmin(obs_1[:,1])
+        results[i,1]=np.argmin(obs_2[:,1])
+        results[i,2]=np.argmin(obs_3[:,1])
+        
+    for i in range(0,10,2):
+        for j in range(N):
+            a=statistics(results_r[j,int(i/2),:])
+            results_r_f[j,i]=a[0]
+            results_r_f[j,i+1]=a[1]*1.96
+            a=statistics(results_bfs[j,int(i/2),:])
+            results_bfs_f[j,i]=a[0]
+            results_bfs_f[j,i+1]=a[1]*1.96
+            a=statistics(results_rw[j,int(i/2),:])
+            results_rw_f[j,i]=a[0]
+            results_rw_f[j,i+1]=a[1]*1.96
+    
+    from os.path import exists
+    from os import makedirs
+    
+    #folder
+    directory="../data/time_evo_2/"
+    if not exists(directory):
+        makedirs(directory)
+        
+    #save the data (time evolution)
+
+    name="time_evo_r_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results_r_f)
+    
+    name="time_evo_bfs_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results_bfs_f)
+    
+    name="time_evo_rw_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results_rw_f)
+    
+    #folder
+    directory="../data/time_evo_minimum/"
+    if not exists(directory):
+        makedirs(directory)
+        
+    #save the data (minima)
+
+    name="minimum_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results)
+
+#statistics of the minimum position for different networks
+def main_program_m(N,k,r,update_rule,N_i,rule):
+    """Executes realization N_i times and save the position of the minimum
+        of q_def(t).
+    Inputs:
+        - N: number of nodes.
+        - k: expected number of connections per node.
+        - r: noise [0,0.5]
+        - update_rule: function.
+        - N_i: number of executions to average.
+        - rule: str of the rule to save the data file."""
+    
+    
+    
+    results=np.zeros((N_i,3))
+    
+    for i in range(N_i):
+        np.random.seed(i+10)
+        GTN=ground_truth_network(N, k)
+        s,J,n_a,n_n,G=GTN
+        observer_info=observer(s, J, r, n_a, n_n)
+        obs_1,obs_2,obs_3=exploration(N, k, r, update_rule, GTN, observer_info)
+        #search for the positions of the minima
+        results[i,0]=np.argmin(obs_1[:,1])
+        results[i,1]=np.argmin(obs_2[:,1])
+        results[i,2]=np.argmin(obs_3[:,1])
+    
+    from os.path import exists
+    from os import makedirs
+    
+    #folder
+    directory="../data/time_evo_minimum/"
+    if not exists(directory):
+        makedirs(directory)
+        
+    #save the data
+
+    name="minimum_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+        +"_"+str(N_i)+".dat"
+    np.savetxt(directory+name, results)
+
 #%%
-main_program(100,21,0.1,update_majority,1000,"mr")
-main_program(100,21,0.1,update_rn,1000,"rn")
+#main_program(100,21,0.1,update_majority,1000,"mr")
+#main_program(100,21,0.1,update_rn,1000,"rn")
+
+#%%
+k_values=np.array([10,20,30,40,50])
+r_values=np.arange(0.01,0.5005,0.01)
+N_values=np.array([100,500,1000])
+#%%
+for N in N_values:
+    for k in k_values:
+        for r in r_values:
+                main_program_3(N,k,r,update_majority,1000,"mr")
