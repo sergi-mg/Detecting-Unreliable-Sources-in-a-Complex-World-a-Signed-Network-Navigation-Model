@@ -94,6 +94,55 @@ def uncertainty(mean,sigma,N_k,N_r):
         
     return t_min,dt_min
 
+def box_plot(rule,index_k,k_values,r_values,N,N_i,index_strategy):
+    """Reads the files for the indicated k and strategy and creates a box plot
+    with the N_i values for each r.
+    Strategies: Random Selection (0), Ordered by distance (1), 
+                random walk (2)."""
+    
+    directory="../data/time_evo_minimum/"
+    
+    N_r=np.size(r_values)
+    values=np.zeros((N_i,N_r),dtype="float64")
+    k=k_values[index_k]
+    for j in range(N_r):
+        r=r_values[j]
+        #reading the file
+        f_name="minimum_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+            +"_"+str(N_i)+".dat"
+        results=np.loadtxt(fname=directory+f_name,dtype="float64")
+        results*=(1./N)
+        values[:,j]=results[:,index_strategy]
+     
+    fig, ax = plt.subplots()
+
+    ax.boxplot(
+        values,
+        positions=r_values,
+        widths=0.005,
+        showfliers=True,
+        flierprops=dict(
+        marker='x',        # tipo de marcador
+        markersize=1,      # tamaño
+        linestyle='none'   # sin líneas
+    )
+    )
+    
+
+    means = values.mean(axis=0)
+    ax.scatter(r_values, means, color="red")
+    
+    ax.set_xlim(0, 0.501)
+    ax.set_ylim(0,1)
+    ticks = np.arange(0, 0.51, 0.1)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([f"{t:.1f}" for t in ticks])
+    
+    ax.set_xlabel(r"$r$")
+    ax.set_ylabel(r"$t_{min}$")
+    
+    plt.show()
+
 
 def plot_minima(N,k_values,r_values,N_i):
     """Returns a plot for each k of the position of the minima as a 
@@ -163,8 +212,9 @@ for i in range(np.size(N_values)):
     plot_minima(N_values[i], k_values, r_values, N_i)
 
 #%%
-#statistics of a single point
-m,s=statistics_matrix("mr",k_values,r_values,500,N_i)
+#Box plot
+box_plot("mr", 1, k_values, r_values, 1000, N_i, 0)
+
 #%%
 @njit
 def histogram(N,data,xmin,xmax,nbox):

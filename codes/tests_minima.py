@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Mar  4 12:23:10 2026
+Created on Mon Apr  6 12:22:03 2026
 
-Author: Sergi Martínez Galindo
-
-Study of the system's evolution.
+@author: Sergi Martínez Galindo
 """
 #%%
 #libraries 
@@ -486,135 +484,6 @@ def statistics(x):
 
 #%%
 
-#Averaging over the same network
-def main_program(N,k,r,update_rule,N_i,rule):
-    """Executes realization N_i times and save the data at folder data.
-    Inputs:
-        - N: number of nodes.
-        - k: expected number of connections per node.
-        - r: noise [0,0.5]
-        - update_rule: function.
-        - N_i: number of executions to average.
-        - rule: str of the rule to save the data file."""
-    
-    GTN=ground_truth_network(N, k)
-    s,J,n_a,n_n,G=GTN
-    observer_info=observer(s, J, r, n_a, n_n)
-    
-    results_r=np.zeros((N,5,N_i))
-    results_rw=np.zeros((N,5,N_i))
-    results_bfs=np.zeros((N,5,N_i))
-    
-    results_r_f=np.zeros((N,10))
-    results_rw_f=np.zeros((N,10))
-    results_bfs_f=np.zeros((N,10))
-    
-    for i in range(N_i):
-        np.random.seed(i+10)
-        obs_1,obs_2,obs_3=exploration(N, k, r, update_rule, GTN, observer_info)
-        results_r[:,:,i]=obs_1[:,:]
-        results_bfs[:,:,i]=obs_2[:,:]
-        results_rw[:,:,i]=obs_3[:,:]
-        
-    for i in range(0,10,2):
-        for j in range(N):
-            a=statistics(results_r[j,int(i/2),:])
-            results_r_f[j,i]=a[0]
-            results_r_f[j,i+1]=a[1]*1.96
-            a=statistics(results_bfs[j,int(i/2),:])
-            results_bfs_f[j,i]=a[0]
-            results_bfs_f[j,i+1]=a[1]*1.96
-            a=statistics(results_rw[j,int(i/2),:])
-            results_rw_f[j,i]=a[0]
-            results_rw_f[j,i+1]=a[1]*1.96
-    
-    from os.path import exists
-    from os import makedirs
-    
-    #folder
-    directory="../data/time_evo/"
-    if not exists(directory):
-        makedirs(directory)
-        
-    #save the data
-
-    name="time_evo_r_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_r_f)
-    
-    name="time_evo_bfs_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_bfs_f)
-    
-    name="time_evo_rw_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_rw_f)
-
-#averaging over different netwroks    
-def main_program_2(N,k,r,update_rule,N_i,rule):
-    """Executes realization N_i times and save the data at folder data.
-    Inputs:
-        - N: number of nodes.
-        - k: expected number of connections per node.
-        - r: noise [0,0.5]
-        - update_rule: function.
-        - N_i: number of executions to average.
-        - rule: str of the rule to save the data file."""
-    
-    
-    
-    results_r=np.zeros((N,5,N_i))
-    results_rw=np.zeros((N,5,N_i))
-    results_bfs=np.zeros((N,5,N_i))
-    
-    results_r_f=np.zeros((N,10))
-    results_rw_f=np.zeros((N,10))
-    results_bfs_f=np.zeros((N,10))
-    
-    for i in range(N_i):
-        np.random.seed(i+10)
-        GTN=ground_truth_network(N, k)
-        s,J,n_a,n_n,G=GTN
-        observer_info=observer(s, J, r, n_a, n_n)
-        obs_1,obs_2,obs_3=exploration(N, k, r, update_rule, GTN, observer_info)
-        results_r[:,:,i]=obs_1[:,:]
-        results_bfs[:,:,i]=obs_2[:,:]
-        results_rw[:,:,i]=obs_3[:,:]
-        
-    for i in range(0,10,2):
-        for j in range(N):
-            a=statistics(results_r[j,int(i/2),:])
-            results_r_f[j,i]=a[0]
-            results_r_f[j,i+1]=a[1]*1.96
-            a=statistics(results_bfs[j,int(i/2),:])
-            results_bfs_f[j,i]=a[0]
-            results_bfs_f[j,i+1]=a[1]*1.96
-            a=statistics(results_rw[j,int(i/2),:])
-            results_rw_f[j,i]=a[0]
-            results_rw_f[j,i+1]=a[1]*1.96
-    
-    from os.path import exists
-    from os import makedirs
-    
-    #folder
-    directory="../data/time_evo_2/"
-    if not exists(directory):
-        makedirs(directory)
-        
-    #save the data
-
-    name="time_evo_r_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_r_f)
-    
-    name="time_evo_bfs_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_bfs_f)
-    
-    name="time_evo_rw_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_rw_f)
-
 #averaging over different networks + saving the t_min for statistics
 def main_program_3(N,k,r,update_rule,N_i,rule):
     """Executes realization N_i times and save the data at folder data,
@@ -665,87 +534,66 @@ def main_program_3(N,k,r,update_rule,N_i,rule):
             results_rw_f[j,i]=a[0]
             results_rw_f[j,i+1]=a[1]*1.96
     
-    from os.path import exists
-    from os import makedirs
-    
-    #folder
-    directory="../data/time_evo_2/"
-    if not exists(directory):
-        makedirs(directory)
-        
-    #save the data (time evolution)
+    return results,results_r_f,results_bfs_f,results_rw_f,\
+        results_r,results_bfs,results_rw
 
-    name="time_evo_r_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_r_f)
-    
-    name="time_evo_bfs_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_bfs_f)
-    
-    name="time_evo_rw_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results_rw_f)
-    
-    #folder
-    directory="../data/time_evo_minimum/"
-    if not exists(directory):
-        makedirs(directory)
-        
-    #save the data (minima)
 
-    name="minimum_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results)
+#%%
+N=1000
+k=20
+r=0.45
+N_i=1000
+minima,rs,obd,rw,rs_s,obd_s,rw_s=main_program_3(N,k,r,update_majority,N_i,"mr")
+minima=minima/1000
+rs=rs[:,2:4]
+obd=obd[:,2:4]
+rw=rw[:,2:4]
+rs_s=rs_s[:,1]
+obd_s=obd_s[:,1]
+rw_s=rw_s[:,1]
 
-#statistics of the minimum position for different networks
-def main_program_m(N,k,r,update_rule,N_i,rule):
-    """Executes realization N_i times and save the position of the minimum
-        of q_def(t).
-    Inputs:
-        - N: number of nodes.
-        - k: expected number of connections per node.
-        - r: noise [0,0.5]
-        - update_rule: function.
-        - N_i: number of executions to average.
-        - rule: str of the rule to save the data file."""
-    
-    
-    
-    results=np.zeros((N_i,3))
-    
+strategies=[rs_s,obd_s,rw_s]
+strategies_a=[rs,obd,rw]
+strategy_name=["Random Selection", "Ordered by Distance", "Random Walk"]
+t=np.arange(0,1000,1)/1000
+
+
+#%%
+from os.path import exists
+from os import makedirs
+
+#folder
+directory_save="../images/tests_minima/"
+if not exists(directory_save):
+    makedirs(directory_save)
+
+s=0
+mean=np.mean(minima,axis=0)
+
+for strategy in strategies:
+    fig, axs = plt.subplots(1, 2, figsize=(10, 4))
     for i in range(N_i):
-        np.random.seed(i+10)
-        GTN=ground_truth_network(N, k)
-        s,J,n_a,n_n,G=GTN
-        observer_info=observer(s, J, r, n_a, n_n)
-        obs_1,obs_2,obs_3=exploration(N, k, r, update_rule, GTN, observer_info)
-        #search for the positions of the minima
-        results[i,0]=np.argmin(obs_1[:,1])
-        results[i,1]=np.argmin(obs_2[:,1])
-        results[i,2]=np.argmin(obs_3[:,1])
+        axs[0].plot(t[1:], strategy[1:, i])
     
-    from os.path import exists
-    from os import makedirs
     
-    #folder
-    directory="../data/time_evo_minimum/"
-    if not exists(directory):
-        makedirs(directory)
+    axs[0].set_xscale("log")
+    axs[0].set_ylabel("$q_{def}$")
+    axs[0].set_xlabel("Fraction of defined nodes")
+    
+    axs[1].errorbar(t[1:],strategies_a[s][1:,0],xerr=0,yerr=strategies_a[s][1:,1],
+                    linestyle="none")
+    axs[1].plot(t[1:],strategies_a[s][1:,0],c="black",label="Averaged curve")
+    axs[1].axvline(mean[s], color='red', linestyle='--', linewidth=2, 
+                   label=r"Averaged $t_{min}$")
+    axs[1].set_ylabel(r"$\langle q_{def} \rangle$")
+    axs[1].set_xlabel("Fraction of defined nodes")
+    axs[1].set_xscale("log")
+    axs[1].legend()
+    
+    plt.tight_layout()
+    plt.show()
+    
+    plt.savefig(directory_save+str(N)+"_"+str(k)+"_"+"_"+str(r)+"_"\
+               +strategy_name[s]+"_minima_1000it.png",bbox_inches="tight")
         
-    #save the data
-
-    name="minimum_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".dat"
-    np.savetxt(directory+name, results)
-
-
-#%%
-k_values=np.array([20])
-r_values=np.arange(0.05,0.5005,0.05)
-N_values=np.array([100,500,1000])
-#%%
-for N in N_values:
-    for k in k_values:
-        for r in r_values:
-                main_program_3(N,k,r,update_majority,1000,"mr")
+    s+=1
