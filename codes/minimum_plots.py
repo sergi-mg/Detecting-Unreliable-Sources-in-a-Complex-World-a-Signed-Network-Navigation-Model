@@ -233,7 +233,7 @@ def histogram(N,data,xmin,xmax,nbox):
             nb=int(((data[i]-xmin)/h)+1)
             if (nb==nbox+1):
                 nb=nb-1 
-            nk[nb]+=1 
+            nk[nb-1]+=1 
     
     vhis=np.zeros((nbox),dtype="float64")
     errhis=np.zeros((nbox),dtype="float64")
