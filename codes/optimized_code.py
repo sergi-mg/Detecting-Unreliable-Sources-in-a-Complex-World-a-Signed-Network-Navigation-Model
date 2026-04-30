@@ -38,7 +38,6 @@ def update_majority(links,s_o,n,n_d,k,k_d,i_s):
         - n_d: 1D array with the defined neighbours of i_s node. 
         - k_d: number of defined neighbours of i_s node."""
     
-        
     #we define the opinion considering all defined neighbours
     new_value=np.sign(np.sum(s_o[n]*links[i_s,:k]))
     
@@ -51,6 +50,7 @@ def update_majority(links,s_o,n,n_d,k,k_d,i_s):
 
     return s_o
 
+@njit
 def update_majority_anchor(links,s_o,n,n_d,k,k_d,i_s):
     """Returns the updated o matrix using the majority rule.
     o must be a shape (N,2) array with each component from 1 to N being (0,0),
@@ -103,9 +103,9 @@ def update_majority_ambiguity(links,s_o,n,n_d,k,k_d,i_s):
         elif val==-1:
             negative+=1
     if positive/(positive+negative)>0.75:
-        s_o[i_s]=True
+        s_o[i_s]=1
     else:
-        s_o[i_s]=False
+        s_o[i_s]=-1
 
     return s_o
 
@@ -220,12 +220,12 @@ def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s):
                     counter+=1
             
             #update of opinions
-            s_o_new=update_rule(links_o,s_o_new,n_s,k_s,d_n,k,i_s)
+            s_o_new=update_rule(links_o,s_o_new,n_s,d_n,k_s,k,i_s)
             i+=1
             
             #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
             observables[i+1,0]=d[i_s]*1.
-            s_o_i=s_o_new(i_s)
+            s_o_i=s_o_new[i_s]
             observables[i+1,1]=observables[i,1]*(i+1)/(i+2)+s_o_i*s[i_s]/(i+2)
             observables[i+1,2]=accuracy(s,s_o_new,N)
             observables[i+1,3] = max(observables[i,3], d[i_s])
@@ -285,14 +285,14 @@ def explore_nw_bfs(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s):
                 counter+=1
         
         #update of opinions
-        s_o_new=update_rule(links_o,s_o_new,n_s,k_s,d_n,k,i_s)
+        s_o_new=update_rule(links_o,s_o_new,n_s,d_n,k_s,k,i_s)
         
         #update of tracking variables
         def_n[i_s]=True
         
         #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
         observables[i+1,0]=d[i_s]*1.
-        s_o_i=s_o_new(i_s)
+        s_o_i=s_o_new[i_s]
         observables[i+1,1]=observables[i,1]*(i+1)/(i+2)+s_o_i*s[i_s]/(i+2)
         observables[i+1,2]=accuracy(s,s_o_new,N)
         observables[i+1,3] = max(observables[i,3], d[i_s])
@@ -331,7 +331,6 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s):
     e_nodes=e_n.copy()
     def_n=def_nodes.copy()
     
-    
     for i in range(N-1):
         
         #node selected
@@ -351,13 +350,14 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s):
         k=np.sum(def_n[n_s])
         d_n=np.zeros(k,dtype=np.int32)
         counter=0
+        
         for j in n_s:
             if def_n[j]==True:
                 d_n[counter]=j
                 counter+=1
-        
+                
         #update of opinions
-        s_o_new=update_rule(links_o,s_o_new,n_s,k_s,d_n,k,i_s)
+        s_o_new=update_rule(links_o,s_o_new,n_s,d_n,k_s,k,i_s)
         
         #update of tracking variables
         e_nodes[i_s]=False
@@ -368,7 +368,7 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s):
         
         #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
         observables[i+1,0]=d[i_s]*1.
-        s_o_i=s_o_new(i_s)
+        s_o_i=s_o_new[i_s]
         observables[i+1,1]=observables[i,1]*(i+1)/(i+2)+s_o_i*s[i_s]/(i+2)
         observables[i+1,2]=accuracy(s,s_o_new,N)
         observables[i+1,3] = max(observables[i,3], d[i_s])
@@ -425,7 +425,7 @@ def ground_truth_network(N,k):
         neighbours_array[i, :deg]=neighbours[i]
         
     #links array
-    links=np.zeros_like(neighbours_array)
+    links=np.zeros_like(neighbours_array,dtype=np.int32)
     for i in range(N):
         idx = neighbours_array[i, :num_neighbours[i]]
         links[i, :num_neighbours[i]] = s[i] * s[idx]
@@ -592,14 +592,14 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy):
         GTN=ground_truth_network(N, k)
         s,links,n_a,n_n,G=GTN
         observer_info=observer(s, links, r, n_a, n_n)
-        obs=exploration(N, k, r, update_rule, GTN, observer_info)
+        obs=exploration(N, k, r, update_rule, strategy,GTN, observer_info)
         results[:,:,i]=obs[:,:]
         
     from os.path import exists
     from os import makedirs
     
     #folder
-    directory="../data/time_evo_simulations/"
+    directory="../data/time_evo_simulations_biases/"
     if not exists(directory):
         makedirs(directory)
         
@@ -611,10 +611,10 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy):
     np.savez_compressed(directory+name,r=results)
 
 #%%
-r_values=np.arange(0.01,0.5005,0.01)
+r_values=np.arange(0.19,0.5005,0.01)
 k=20
 N=1000
-N_i=5000
+N_i=1000
 #%%
 for r in r_values:
-    main_program(N,k,r,update_majority,N_i,"mr","rs")
+    main_program(N,k,r,update_majority_ambiguity,N_i,"mr_ambiguity","obd")
