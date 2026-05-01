@@ -611,10 +611,10 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy):
     np.savez_compressed(directory+name,r=results)
 
 #%%
-r_values=np.arange(0.19,0.5005,0.01)
+r_values=np.arange(0.01,0.5005,0.01)
 k=20
 N=1000
 N_i=1000
 #%%
 for r in r_values:
-    main_program(N,k,r,update_majority_ambiguity,N_i,"mr_ambiguity","obd")
+    main_program(N,k,r,update_rn,N_i,"rn","rs")

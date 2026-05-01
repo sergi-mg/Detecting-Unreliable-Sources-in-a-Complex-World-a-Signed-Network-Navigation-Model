@@ -231,7 +231,26 @@ k=20
 N=1000
 N_i=1000
 
-A=statistics_matrix("mr", k, r_values, N, N_i, "rs", 2)
+#%%
+#data reading (final accuracy)
 
-final_accuracy_plot(A,r_values,N,N_i,k,"mr","rs")
+#majority rule - random selection
+mr_rs=statistics_matrix("mr", k, r_values, N, N_i, "rs", 2)
+mr_rs_amb=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "rs", 2)
+mr_rs_anc=statistics_matrix("mr_anchor", k, r_values, N, N_i, "rs", 2)
+
+#majority rule - ordered by distance
+mr_obd=statistics_matrix("mr", k, r_values, N, N_i, "obd", 2)
+mr_obd_amb=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "obd", 2)
+mr_obd_anc=statistics_matrix("mr_anchor", k, r_values, N, N_i, "obd", 2)
+
+#random neighbour - random selection
+rn_rs=statistics_matrix("rn", k, r_values, N, N_i, "rs", 2)
+rn_rs_anc=statistics_matrix("rn_anchor", k, r_values, N, N_i, "rs", 2)
+
+#majority rule - ordered by distance
+rn_obd=statistics_matrix("rn", k, r_values, N, N_i, "obd", 2)
+rn_obd_anc=statistics_matrix("rn_anchor", k, r_values, N, N_i, "obd", 2)
+
+#%%
 
