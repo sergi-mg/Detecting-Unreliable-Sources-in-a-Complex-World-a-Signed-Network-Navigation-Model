@@ -79,7 +79,7 @@ def statistics_matrix(rule,k,r_values,N,N_i,strategy,index):
 
     return results
 
-def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy):
+def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy,theory):
     """Saves a plot with <q>(r) for the corresponding rule and exploration
     strategy"""
     
@@ -100,16 +100,26 @@ def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy):
         
     cmap=plt.get_cmap("viridis") 
     plt.figure()
-    plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
-                 linestyle="dashed",marker="o",markersize=2,c=cmap(0.75))
-
+    if theory==True:
+        x=np.arange(0,0.501,0.005)
+        plt.plot(x,N**(-2.*x),c="black",label="Theoretical")
+        
+        plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
+                     linestyle="none",marker="o",markersize=2,c=cmap(0)
+                     ,label="Simulations")
+        plt.legend()
+    else:
+        plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
+                     linestyle="none",marker="o",markersize=2,c=cmap(0))
+    
+    plt.ylim([0,1])
     plt.xlabel("$r$")
     plt.ylabel(r"$\langle q \rangle$")
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.close()
     
-def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list):
+def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory):
     """Saves a plot with <q>(r) for the corresponding rule and exploration
     strategy"""
     
@@ -132,12 +142,19 @@ def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list):
         
     cmap=plt.get_cmap("viridis") 
     plt.figure()
+    
+    if theory==True:
+        x=np.arange(0,0.501,0.005)
+        plt.plot(x,N**(-2.*x),c="black",label="Theoretical")
+        
     for i in range(N_b):
         results=results_list[i]
         plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
-                     linestyle="dashed",marker="o",markersize=2,c=cmap(i/N_b),
+                     linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
                      label=biases_list[i])
+    
     plt.legend()
+    plt.ylim([0,1])
     plt.xlabel("$r$")
     plt.ylabel(r"$\langle q \rangle$")
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
@@ -248,9 +265,49 @@ mr_obd_anc=statistics_matrix("mr_anchor", k, r_values, N, N_i, "obd", 2)
 rn_rs=statistics_matrix("rn", k, r_values, N, N_i, "rs", 2)
 rn_rs_anc=statistics_matrix("rn_anchor", k, r_values, N, N_i, "rs", 2)
 
-#majority rule - ordered by distance
+#random neighbour - ordered by distance
 rn_obd=statistics_matrix("rn", k, r_values, N, N_i, "obd", 2)
 rn_obd_anc=statistics_matrix("rn_anchor", k, r_values, N, N_i, "obd", 2)
 
 #%%
 
+#majority rule - random selection
+
+mr_rs_list=[mr_rs,mr_rs_amb,mr_rs_anc]
+mr_rs_bias=["Without bias", "Ambiguity effect" ,"Anchoring"]
+
+biases_plots(mr_rs_list, r_values, N, N_i, k, "mr", "rs", mr_rs_bias,False)
+
+#majority rule - ordered by distance
+
+mr_obd_list=[mr_obd,mr_obd_amb,mr_obd_anc]
+mr_obd_bias=["Without bias", "Ambiguity effect" ,"Anchoring"]
+
+biases_plots(mr_obd_list, r_values, N, N_i, k, "mr", "obd", mr_obd_bias,False)
+
+#random neighbour - random selection
+
+rn_rs_list=[rn_rs,rn_rs_anc]
+rn_rs_bias=["Without bias","Anchoring"]
+
+biases_plots(rn_rs_list, r_values, N, N_i, k, "rn", "rs", rn_rs_bias,True)
+
+#random neighbour - ordered by distance
+
+rn_obd_list=[rn_obd,rn_obd_anc]
+rn_obd_bias=["Without bias" ,"Anchoring"]
+
+biases_plots(rn_obd_list, r_values, N, N_i, k, "rn", "obd", rn_obd_bias,True)
+
+#%%
+#individual plots
+final_accuracy_plot(mr_rs, r_values, N, N_i, k, "mr", "rs",False)
+final_accuracy_plot(mr_rs_amb, r_values, N, N_i, k, "mr_amb", "rs",False)
+final_accuracy_plot(mr_rs_anc, r_values, N, N_i, k, "mr_anchor", "rs",False)
+final_accuracy_plot(mr_obd, r_values, N, N_i, k, "mr", "obd",False)
+final_accuracy_plot(mr_obd_amb, r_values, N, N_i, k, "mr_amb", "obd",False)
+final_accuracy_plot(mr_obd_anc, r_values, N, N_i, k, "mr_anchor", "obd",False)
+final_accuracy_plot(rn_rs, r_values, N, N_i, k, "rn", "rs",True)
+final_accuracy_plot(rn_rs_anc, r_values, N, N_i, k, "rn_anchor", "rs",True)
+final_accuracy_plot(rn_obd, r_values, N, N_i, k, "rn", "obd",True)
+final_accuracy_plot(rn_obd_anc, r_values, N, N_i, k, "rn_anchor", "obd",True)
