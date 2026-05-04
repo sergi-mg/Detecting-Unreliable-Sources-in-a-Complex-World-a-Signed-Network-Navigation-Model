@@ -241,6 +241,84 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r):
     plt.close()
     
 
+def box_plot(rule,k,r_values,N,N_i,strategy,index):
+    """Reads the files for the indicated k and strategy and creates a box plot
+    with the N_i values for each r.
+    Strategies: Random Selection (0), Ordered by distance (1), 
+                random walk (2)."""
+    
+    directory="../data/time_evo_minimum/"
+    
+    directory="../data/time_evo_simulations_biases/"
+    
+    N_r=np.size(r_values)
+    results=np.zeros((N_i,N_r),dtype="float64")
+    
+    
+    for j in range(N_r):
+        r=r_values[j]
+        #reading the file
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+            +"_"+str(N_i)+".npz"
+        matrix=np.load(directory+name)
+        data=matrix["r"].astype(np.float32) #shape (N,5,N_i)
+        
+        selected_data=data[-1,index,:]
+        
+        results[:,j]=selected_data[:]
+        
+    #folder
+    
+    directory_save="../images/biases/box_plots/"
+    if not exists(directory_save):
+        makedirs(directory_save)
+        
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")
+    
+    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(N_i)+"_"
+     
+    fig, ax = plt.subplots()
+    
+    cmap=plt.get_cmap("viridis")
+
+    ax.boxplot(
+        results,
+        positions=r_values,
+        widths=0.005,
+        showfliers=True,
+        flierprops=dict(
+        marker='x',        # tipo de marcador
+        markersize=1,      # tamaño
+        linestyle='none'   # sin líneas
+    ), medianprops=dict(
+        color=cmap(0.67),      # color de la mediana
+        linewidth=2       # grosor opcional
+    )
+    )
+    
+     
+    means = results.mean(axis=0)
+    ax.plot(r_values,means,linestyle='none',marker='o',markersize=2,
+            color=cmap(0))
+    
+    ax.set_xlim(0, 0.501)
+    ax.set_ylim(-1,1)
+    ticks = np.arange(0, 0.51, 0.1)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([f"{t:.1f}" for t in ticks])
+    
+    ax.set_xlabel(r"$r$")
+    ax.set_ylabel(r"$\langle q \rangle$")
+    
+    plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
+    plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
+    plt.show()
+    plt.close()
+    
+    
     
 #%%
 r_values=np.arange(0.01,0.5005,0.01)
@@ -311,3 +389,23 @@ final_accuracy_plot(rn_rs, r_values, N, N_i, k, "rn", "rs",True)
 final_accuracy_plot(rn_rs_anc, r_values, N, N_i, k, "rn_anchor", "rs",True)
 final_accuracy_plot(rn_obd, r_values, N, N_i, k, "rn", "obd",True)
 final_accuracy_plot(rn_obd_anc, r_values, N, N_i, k, "rn_anchor", "obd",True)
+
+#%%
+#box plots
+#majority rule - random selection
+box_plot("mr", k, r_values, N, N_i, "rs", 2)
+box_plot("mr_ambiguity", k, r_values, N, N_i, "rs", 2)
+box_plot("mr_anchor", k, r_values, N, N_i, "rs", 2)
+
+#majority rule - ordered by distance
+box_plot("mr", k, r_values, N, N_i, "obd", 2)
+box_plot("mr_ambiguity", k, r_values, N, N_i, "obd", 2)
+box_plot("mr_anchor", k, r_values, N, N_i, "obd", 2)
+
+#random neighbour - random selection
+box_plot("rn", k, r_values, N, N_i, "rs", 2)
+box_plot("rn_anchor", k, r_values, N, N_i, "rs", 2)
+
+#random neighbour - ordered by distance
+box_plot("rn", k, r_values, N, N_i, "obd", 2)
+box_plot("rn_anchor", k, r_values, N, N_i, "obd", 2)
