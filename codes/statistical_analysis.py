@@ -177,9 +177,14 @@ def histogram_program(N,N_i,k,r,rule,strategy,index):
     #Plotting the histogram for the final state
     selected_data=data[-1,index,:]
     
-    vhis,errhis,xhis,h=histogram(N_i,selected_data,0,1,int(np.sqrt(N_i)))
+    x_min=selected_data.min()
+    x_max=selected_data.max()
+    mean=selected_data.mean()
     
-    plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r)
+    vhis,errhis,xhis,h=histogram(N_i,selected_data,x_min-0.05,x_max+0.05,
+                                 int(np.sqrt(N_i)))
+    
+    plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean)
     
 
 @njit
@@ -209,7 +214,7 @@ def histogram(N,data,xmin,xmax,nbox):
         
     return vhis,errhis,xhis,h
 
-def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r):
+def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
     
     #folder
     directory_save="../images/biases/histograms/"
@@ -221,7 +226,7 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r):
     if not exists(directory_save+"png/"):
         makedirs(directory_save+"png/")
         
-    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(N_i)+"_"
+    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(N_i)+"_"+str(r)+"_"
     
     #plot
         
@@ -229,11 +234,17 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r):
     plt.figure()
     
     #Bars
-    plt.bar(xhis,vhis,width=h,color=cmap(0.75),edgecolor='black',\
-            align='center')
+    plt.bar(xhis,vhis,width=h,color=cmap(0),edgecolor='black',\
+            align='center',alpha=0.7,label="Histogram")
     #Errorbars
     plt.errorbar(xhis,vhis,yerr=errhis,fmt='k.',capsize=3)
+    
+    # Línea horizontal de la media
+    plt.axvline(mean, color=cmap(0.67), linestyle='--',
+                label=f'Average value={mean:.2f}')
 
+    plt.legend()
+    #plt.xlim([-1,1])
     plt.xlabel(r"$\langle q \rangle$")
     plt.ylabel("$p$")
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
@@ -409,3 +420,27 @@ box_plot("rn_anchor", k, r_values, N, N_i, "rs", 2)
 #random neighbour - ordered by distance
 box_plot("rn", k, r_values, N, N_i, "obd", 2)
 box_plot("rn_anchor", k, r_values, N, N_i, "obd", 2)
+
+#%%
+#histograms
+r_hist=[0.05,0.25,0.45]
+for r in r_hist:
+    
+    #majority rule - random selection
+    histogram_program(N,N_i,k,r,"mr","rs",2)
+    histogram_program(N,N_i,k,r,"mr_anchor","rs",2)
+    histogram_program(N,N_i,k,r,"mr_ambiguity","rs",2)
+    
+    #majority rule - ordered by distance
+    histogram_program(N,N_i,k,r,"mr","obd",2)
+    histogram_program(N,N_i,k,r,"mr_anchor","obd",2)
+    histogram_program(N,N_i,k,r,"mr_ambiguity","obd",2)
+    
+    #random neighbour - random selection
+    histogram_program(N,N_i,k,r,"rn","rs",2)
+    histogram_program(N,N_i,k,r,"rn_anchor","obd",2)
+    
+    #random neighbour - ordered by distance
+    histogram_program(N,N_i,k,r,"rn","obd",2)
+    histogram_program(N,N_i,k,r,"rn_anchor","rs",2)
+    
