@@ -4,6 +4,45 @@ Created on Wed Apr 22 11:42:06 2026
 
 @author: Sergi Martínez Galindo
 """
+
+"""
+#######################################
+IMPORTANT INFORMATION BEFORE EXECUTING
+#######################################
+    
+This program provides the code to simulate the system with different 
+exploration strategies, node definition heuristic rules and biases.
+It is important to use the corresponding strings to identify each case:
+
+- Rule strings
+    1. Majority rule
+        A. No bias: mr
+        B. Anchoring bias: mr_anchor
+        C. Ambiguity bias: mr_ambiguity
+        D. Primacy linear: mr_primacy_linear
+        E. Primacy exponential: mr_primacy_exp
+        F. Primacy power law: mr_primacy_power
+        G. Rececny linear: mr_recency_linear
+        H. Rececny exponential: mr_recency_exp
+        I. Rececny power law: mr_recency_power
+        
+    2. Random neighbour
+        A. No bias: rn
+        B. Anchoring bias: rn_anchor
+        C. Primacy linear: rn_primacy_linear
+        D. Primacy exponential: rn_primacy_exp
+        E. Primacy power law: rn_primacy_power
+        F. Rececny linear: rn_recency_linear
+        G. Rececny exponential: rn_recency_exp
+        H. Rececny power law: rn_recency_power
+        
+- Strategy strings:
+    1. Random selection: rs
+    2. Ordered by distance: obd
+    2. Random walk: rw (note that this strategy can only be used with No bias)
+"""
+
+
 #%%
 #libraries 
 import matplotlib.pyplot as plt
@@ -13,30 +52,65 @@ from numba import njit
 import networkx as nx
 
 #%%
+@njit
+def prim_lin(t):
+    N=1000
+    return (N-t)/N 
+
+@njit
+def prim_exp(t):
+    l=1
+    return np.exp(-l*t) 
+
+@njit
+def prim_pow(t):
+    a=2
+    return (t+1)**-a
+
+@njit
+def rec_lin(t):
+    N=1000
+    return (t+1)/N 
+
+@njit
+def rec_exp(t):
+    l=-1
+    return np.exp(l*t) 
+
+@njit
+def rec_pow(t):
+    a=2
+    return (t+1)**a
+
+
+#%%
 @njit    
 def accuracy(s_t,s_o,N):
     """Returns the accuracy. Inputs:
         - s_t: 1D array with the true values of the nodes.
-        - o: shape (N,2) array with each component being (0,0),(1,0) or (0,1), 
-            where (p+,p-), defined by the observer.
+        - s_o: 1D array with the values determined by the observer.
         - N: number of nodes."""
         
     q=np.sum(s_o*s_t)/N 
     
     return q
 
-
 @njit
-def update_majority(links,s_o,n,n_d,k,k_d,i_s):
-    """Returns the updated o matrix using the majority rule.
-    o must be a shape (N,2) array with each component from 1 to N being (0,0),
-    (1,0) or (0,1). Inputs:
-        - i_s: integer from 0 to N-1. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - n: 1D array with the neighbours of i_s node. 
+def update_majority(links,s_o,n,n_d,k,k_d,i_s,M,w):
+    """Returns the updated s_o vector using the majority rule.
+    s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
-        - n_d: 1D array with the defined neighbours of i_s node. 
-        - k_d: number of defined neighbours of i_s node."""
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, not used here.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time, not used here.
+        """
     
     #we define the opinion considering all defined neighbours
     new_value=np.sign(np.sum(s_o[n]*links[i_s,:k]))
@@ -51,16 +125,50 @@ def update_majority(links,s_o,n,n_d,k,k_d,i_s):
     return s_o
 
 @njit
-def update_majority_anchor(links,s_o,n,n_d,k,k_d,i_s):
-    """Returns the updated o matrix using the majority rule.
-    o must be a shape (N,2) array with each component from 1 to N being (0,0),
-    (1,0) or (0,1). Inputs:
-        - i_s: integer from 0 to N-1. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - n: 1D array with the neighbours of i_s node. 
+def update_majority_weighted(links,s_o,n,n_d,k,k_d,i_s,M,w):
+    """Returns the updated s_o vector using the majority rule (weighted).
+    s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
-        - n_d: 1D array with the defined neighbours of i_s node. 
-        - k_d: number of defined neighbours of i_s node."""
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, not used here.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time.
+        """
+    
+    #we define the opinion considering all defined neighbours
+    new_value=np.sign(np.sum(s_o[n]*links[i_s,:k]*w[n]))
+    
+    #if there is a draw we select one randomly
+    if new_value==0:
+        new_value=1-2*np.random.randint(0,2) 
+    #we update the results
+    # update
+    s_o[i_s]=new_value
+
+    return s_o
+
+@njit
+def update_majority_anchor(links,s_o,n,n_d,k,k_d,i_s,M,w):
+    """Returns the updated s_o vector using the majority rule (anchoring bias).
+    s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
+        - k: number of neighbours of i_s node.
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, not used here.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time, not used here.
+        """
     
     #is [0] a neighbour
     for idx in range(k):
@@ -82,16 +190,22 @@ def update_majority_anchor(links,s_o,n,n_d,k,k_d,i_s):
     return s_o
 
 @njit
-def update_majority_ambiguity(links,s_o,n,n_d,k,k_d,i_s):
-    """Returns the updated o matrix using the majority rule.
-    o must be a shape (N,2) array with each component from 1 to N being (0,0),
-    (1,0) or (0,1). Inputs:
-        - i_s: integer from 0 to N-1. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - n: 1D array with the neighbours of i_s node. 
+def update_majority_ambiguity(links,s_o,n,n_d,k,k_d,i_s,M,w):
+    """Returns the updated s_o vector using the majority rule (ambiguity bias).
+    s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
-        - n_d: 1D array with the defined neighbours of i_s node. 
-        - k_d: number of defined neighbours of i_s node."""
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time, not used here.
+        """
     
     positive=0
     negative=0
@@ -102,24 +216,30 @@ def update_majority_ambiguity(links,s_o,n,n_d,k,k_d,i_s):
             positive+=1
         elif val==-1:
             negative+=1
-    if positive/(positive+negative)>0.75:
+    if positive/(positive+negative)>M:
         s_o[i_s]=1
     else:
         s_o[i_s]=-1
 
     return s_o
 
+
 @njit
-def update_rn(links,s_o,n,n_d,k,k_d,i_s):
+def update_rn(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated o matrix using the random neighbour rule.
-    o must be a shape (N,2) array with each component from 1 to N being (0,0),
-    (1,0) or (0,1). Inputs:
-        - i_s: integer from 0 to N-1. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - n: 1D array with the neighbours of i_s node. 
+    s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
-        - n_d: 1D array with the defined neighbours of i_s node. 
-        - k_d: number of defined neighbours of i_s node."""
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, not used here.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time, not used here.
+        """
             
     #we choose a neighbour
     c_n=n_d[np.random.randint(k_d)]
@@ -133,16 +253,59 @@ def update_rn(links,s_o,n,n_d,k,k_d,i_s):
     return s_o
 
 @njit
-def update_rn_anchor(links,s_o,n,n_d,k,k_d,i_s):
-    """Returns the updated o matrix using the random neighbour rule.
-    o must be a shape (N,2) array with each component from 1 to N being (0,0),
-    (1,0) or (0,1). Inputs:
-        - i_s: integer from 0 to N-1. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - n: 1D array with the neighbours of i_s node. 
+def update_rn_weighted(links,s_o,n,n_d,k,k_d,i_s,M,w):
+    """Returns the updated o matrix using the random neighbour rule (weighted).
+    s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
-        - n_d: 1D array with the defined neighbours of i_s node. 
-        - k_d: number of defined neighbours of i_s node."""
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, not used here.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time, not used here.
+        """
+            
+    #we choose a neighbour
+    #weights
+    w_d_n = w[n_d].copy()
+    #random selection
+    a1=np.random.rand()*np.sum(w_d_n)
+    
+    cumulative=0
+    for j in range(k_d):
+            cumulative+=w_d_n[j]
+            if a1<cumulative:
+                c_n=n_d[j]
+                break
+            
+    for idx in range(k):
+        if n[idx] == c_n:
+            break
+    #update
+    s_o[i_s]=links[i_s,idx]*s_o[c_n]
+
+    return s_o
+
+@njit
+def update_rn_anchor(links,s_o,n,n_d,k,k_d,i_s,M,w):
+    """Returns the updated o matrix using the random neighbour rule (anchoring
+    bias). s_o must be a shape (N) array with each component from 1 to N being
+    -1, 0 or +1. Inputs:
+        - links: 1D array (k) containing sign of the links, same order as in n.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+        - n: 1D (k) array with the neighbours (index) of i_s node. 
+        - k: number of neighbours of i_s node.
+        - n_d: 1D array (k_d) with the defined neighbours of i_s node. 
+        - k_d: number of defined neighbours of i_s node.
+        - i_s: integer from 0 to N-1 indicating the selected node.
+        - M: float, not used here.
+        - w: 1D array (N) containing the weights of the nodes as a function
+        of the discovery time, not used here.
+        """
         
     #is [0] a neighbour
     for idx in range(k):
@@ -163,20 +326,27 @@ def update_rn_anchor(links,s_o,n,n_d,k,k_d,i_s):
     return s_o
 
 @njit
-def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s):
-    """Explores the network and returns the final o matrix. Inputs:
-        - o: shape (N,2) array with each component being (0,0),(1,0) or (0,1),
-            since here it acts as the initial condition, only one non-zero
+def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s,
+                  M,weight,w_b):
+    """Explores the network with a random walk and returns the system's
+    evolution. Inputs:
+       - s_o: 1D (N) array containing the observer's opinion of each node.
+            Since here it acts as the initial condition, only one non-zero
             component. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - update_rule: function.
+        - links_o: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - n_a: shape (N,k_max) array containing the neihbours of each
             node, if k_i<k_max the rest of the values are -1. 
-        - n_n: 1D array containin the number of neighbours (k_i) of each node.
+        - n_n: 1D array containing the number of neighbours (k_i) of each node.
         - def_nodes: 1D boolean array where True corresponts to defined.
         - modify: boolean indicating if a defined node can be modified.
         - d: array containing the distance to node 0.
         - s: 1D int32 array with values +1,-1 of the truth network.
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)
+        - weight: function of one variable, used to calculate the wieght of 
+        each node (only used for ordering effects)
+        - w_b: Boolean indicating if there is an ordering affect to apply.
         Outputs: 
             -observables: array (N,5) d(t),q_def(t),q(t),d_max(t),<d>(t)"""
 
@@ -194,6 +364,11 @@ def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s):
     
     def_n=def_nodes.copy()
     
+
+    w=np.zeros(N)
+    if w_b==True:
+        w[0]=weight(0)
+    
     iterations=0
     i=-1
     while np.sum(def_n)!=N:
@@ -208,19 +383,21 @@ def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s):
             None
         else:
             #defined neighbours of the selected node
-            k_s=n_n[i_s]
-            n_s=np.zeros(k_s,dtype=np.int32)
-            n_s[:]=n_a[i_s,:k_s]
-            k=np.sum(def_n[n_s])
-            d_n=np.zeros(k,dtype=np.int32)
+            k=n_n[i_s]
+            n=np.zeros(k,dtype=np.int32)
+            n[:]=n_a[i_s,:k]
+            k_d=np.sum(def_n[n])
+            n_d=np.zeros(k,dtype=np.int32)
             counter=0
-            for j in n_s:
+            for j in n:
                 if def_n[j]==True:
-                    d_n[counter]=j
+                    n_d[counter]=j
                     counter+=1
             
-            #update of opinions
-            s_o_new=update_rule(links_o,s_o_new,n_s,d_n,k_s,k,i_s)
+            #update of opinions n,n_d,k,k_d
+            s_o_new=update_rule(links_o,s_o_new,n,n_d,k,k_d,i_s,M,w)
+            if w_b==True:
+                w[i_s]=weight(i+1) 
             i+=1
             
             #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
@@ -239,20 +416,27 @@ def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s):
     return observables
 
 @njit
-def explore_nw_bfs(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s):
-    """Explores the network and returns the final o matrix. Inputs:
-        - o: shape (N,2) array with each component being (0,0),(1,0) or (0,1),
-            since here it acts as the initial condition, only one non-zero
+def explore_nw_obd(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s
+                   ,M,weight,w_b):
+    """Explores the network using an ordered by distance strategy and returns
+    the system's evolution. Inputs:
+       - s_o: 1D (N) array containing the observer's opinion of each node.
+            Since here it acts as the initial condition, only one non-zero
             component. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - update_rule: function.
-        - n_a: shape (N,k_max) array comtaineing the neihbours of each
+        - links_o: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
+        - n_a: shape (N,k_max) array containing the neihbours of each
             node, if k_i<k_max the rest of the values are -1. 
-        - n_n: 1D array containin the number of neighbours (k_i) of each node
-        - def_nodes: 1D boolean array where True corresponts to defined. 
-        - order: 1D array containing the order to follow (BFS).
+        - n_n: 1D array containing the number of neighbours (k_i) of each node.
+        - def_nodes: 1D boolean array where True corresponts to defined.
+        - modify: boolean indicating if a defined node can be modified.
         - d: array containing the distance to node 0.
         - s: 1D int32 array with values +1,-1 of the truth network.
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)
+        - weight: function of one variable, used to calculate the wieght of 
+        each node (only used for ordering effects)
+        - w_b: Boolean indicating if there is an ordering affect to apply.
         Outputs: 
             -observables: array (N,5) d(t),q_def(t),q(t),d_max(t),<d>(t)"""
 
@@ -267,28 +451,35 @@ def explore_nw_bfs(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s):
     #d(t),q_def(t),q(t),d_max(t),<d>(t)
     observables[0,:]=np.array([0.,1.,1./N,0.,0.])
     
+    w=np.zeros(N)
+    if w_b==True:
+        w[0]=weight(0)
+    
     for i in range(N-1):
         
         #node selected
         i_s=order[i+1]
         
         #defined neighbours of the selected node
-        k_s=n_n[i_s]
-        n_s=np.zeros(k_s,dtype=np.int32)
-        n_s[:]=n_a[i_s,:k_s]
-        k=np.sum(def_n[n_s])
-        d_n=np.zeros(k,dtype=np.int32)
+        k=n_n[i_s]
+        n=np.zeros(k,dtype=np.int32)
+        n[:]=n_a[i_s,:k]
+        k_d=np.sum(def_n[n])
+        n_d=np.zeros(k,dtype=np.int32)
         counter=0
-        for j in n_s:
+        for j in n:
             if def_n[j]==True:
-                d_n[counter]=j
+                n_d[counter]=j
                 counter+=1
         
-        #update of opinions
-        s_o_new=update_rule(links_o,s_o_new,n_s,d_n,k_s,k,i_s)
+        #update of opinions n,n_d,k,k_d
+        s_o_new=update_rule(links_o,s_o_new,n,n_d,k,k_d,i_s,M,w)
+        if w_b==True:
+            w[i_s]=weight(i+1)
         
         #update of tracking variables
         def_n[i_s]=True
+        
         
         #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
         observables[i+1,0]=d[i_s]*1.
@@ -301,22 +492,29 @@ def explore_nw_bfs(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s):
     return observables
 
 @njit
-def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s):
-    """Inputs:
-        - o: shape (N,2) array with each component being (0,0),(1,0) or (0,1),
-            since here it acts as the initial condition, only one non-zero
+def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s
+                 ,M,weight,w_b):
+    """"Explores the network using the random selection strategy and returns
+    the system's evolution. Inputs:
+       - s_o: 1D (N) array containing the observer's opinion of each node.
+            Since here it acts as the initial condition, only one non-zero
             component. 
-        - J_o: int32 NxN array which contains the signed connections.
-        - update_rule: function.
-        - n_a: shape (N,k_max) array comtaineing the neihbours of each
+        - links_o: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
+        - n_a: shape (N,k_max) array containing the neihbours of each
             node, if k_i<k_max the rest of the values are -1. 
-        - n_n: 1D array containin the number of neighbours (k_i) of each node.
-        - e_n: 1D boolean array where True corresponds to being eligible.
+        - n_n: 1D array containing the number of neighbours (k_i) of each node.
         - def_nodes: 1D boolean array where True corresponts to defined.
+        - modify: boolean indicating if a defined node can be modified.
         - d: array containing the distance to node 0.
         - s: 1D int32 array with values +1,-1 of the truth network.
-    Outputs: 
-        -observables: array (N,5) d(t),q_def(t),q(t),d_max(t),<d>(t)"""
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)
+        - weight: function of one variable, used to calculate the wieght of 
+        each node (only used for ordering effects)
+        - w_b: Boolean indicating if there is an ordering affect to apply.
+        Outputs: 
+            -observables: array (N,5) d(t),q_def(t),q(t),d_max(t),<d>(t)"""
         
     #number of subjects
     N=s_o.shape[0]
@@ -331,6 +529,10 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s):
     e_nodes=e_n.copy()
     def_n=def_nodes.copy()
     
+    w=np.zeros(N)
+    if w_b==True:
+        w[0]=weight(0)
+    
     for i in range(N-1):
         
         #node selected
@@ -344,27 +546,29 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s):
         i_s=eligible_array[np.random.randint(N_e)]
         
         #defined neighbours of the selected node
-        k_s=n_n[i_s]
-        n_s=np.zeros(k_s,dtype=np.int32)
-        n_s[:]=n_a[i_s,:k_s]
-        k=np.sum(def_n[n_s])
-        d_n=np.zeros(k,dtype=np.int32)
+        k=n_n[i_s]
+        n=np.zeros(k,dtype=np.int32)
+        n[:]=n_a[i_s,:k]
+        k_d=np.sum(def_n[n])
+        n_d=np.zeros(k,dtype=np.int32)
         counter=0
-        
-        for j in n_s:
+        for j in n:
             if def_n[j]==True:
-                d_n[counter]=j
+                n_d[counter]=j
                 counter+=1
-                
-        #update of opinions
-        s_o_new=update_rule(links_o,s_o_new,n_s,d_n,k_s,k,i_s)
+        
+        #update of opinions n,n_d,k,k_d
+        s_o_new=update_rule(links_o,s_o_new,n,n_d,k,k_d,i_s,M,w)
+        if w_b==True:
+            w[i_s]=weight(i+1) 
         
         #update of tracking variables
         e_nodes[i_s]=False
         def_n[i_s]=True
-        for j in n_s:
+        for j in n:
             if def_n[j]==False:
                 e_nodes[j]=True
+        
         
         #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
         observables[i+1,0]=d[i_s]*1.
@@ -383,12 +587,12 @@ def ground_truth_network(N,k):
         - k: expected number of edges per node.
     Outputs: 
         - s: 1D int32 array with values +1,-1.
-        - J: NxN array with the signed connections.
-        - neighbours_array: shape (N,k_max) array comtaineing the neihbours
+        - links: shape (N,k_max) array containing the sign of the links given
+            by si*sj, in the same order as neighbours_array
+        - neighbours_array: shape (N,k_max) array containing the neihbours
             of each node, if k_i<k_max the rest of the values are -1.
-        - num_neighbours: 1D array containin the number of neighbours 
+        - num_neighbours: 1D array containing the number of neighbours 
             of each node.
-        - isolated: boolean indicating if there are isolated clusters.
         - G: network."""
         
     #nodes' values
@@ -436,17 +640,19 @@ def observer(s,links,r,n_a,n_n):
     """Generates the obersver variables.
     Inputs:
         - s: 1D int32 array with values +1,-1.
-        - J: NxN array with the signed connections.
+        - links: shape (N,k_max) array containing the sign of the links given
+            by si*sj, in the same order as n_a.
         - r: noise [0,0.5]
         - n_a: shape (N,k_max) array comtaineing the neihbours
             of each node, if k_i<k_max the rest of the values are -1.
         - n_n: 1D array containin the number of neighbours 
             of each node.
     Outputs: 
-        - o: shape (N,2) array with each component being (0,0),(1,0) or (0,1), 
-            where (p+,p-).
-        - J_o: NxN array with the signed connections affected by the noise
-            with probability r.
+        - s_o: 1D (N) array containing the observer's opinion of each node.
+             Since here it acts as the initial condition, only one non-zero
+             component. 
+         - links_o: (N,k_max) array containing the links affected by noise, in 
+             the same order as the n_a matrix.
         - defined: 1D boolean array where True corresponds to defined.
         - eligible: 1D boolean array where True corresponds to being eligible."""
         
@@ -488,7 +694,7 @@ def observer(s,links,r,n_a,n_n):
     
     return s_o,links_o,defined,eligible
 
-def exploration(N,k,r,update_rule,strategy,GTN,observer_info):
+def exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight,rule):
     """Excutes the exploration of the network for the 3
     different exploration rules.
     Inputs:
@@ -496,12 +702,28 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info):
         - k: expected number of connections per node.
         - r: noise [0,0.5]
         - update_rule: function.
+        - strategy: string with the strategy name.
         - GTN: tupple (s,J,n_a,n_n,G)
-        -observer_info: tupple (o,J_o,def_nodes,eli_nodes)
+        - observer_info: tupple (o,J_o,def_nodes,eli_nodes)
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)
+        - weight: function of one variable, used to calculate the wieght of 
+        each node (only used for ordering effects)
+        - rule: string with the rule name 
     Outputs: 
-        - observables (1,2,3): time dependant observables arrays (N,5) - 
+        - observables: time dependant observables arrays (N,5) - 
         d(t),q_def(t),q(t),d_max(t),<d>(t).
         """
+    
+    #only for weighted biases
+    list_w_b=["mr_primacy_linear","mr_primacy_exp","mr_primacy_power",
+              "rn_primacy_linear","rn_primacy_exp","rn_primacy_power",
+              "mr_recency_linear","mr_recency_exp","mr_recency_power",
+              "rn_recency_linear","rn_recency_exp","rn_recency_power"]
+    
+    w_b=False
+    if rule in list_w_b:
+        w_b=True
 
     #ground truth network
     s,links,n_a,n_n,G=GTN
@@ -520,7 +742,7 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info):
         #random selection
         #exploration
         observables[:,:]=explore_nw_r(o,links_o,update_rule,n_a,n_n,eli_nodes,\
-                                 def_nodes,d_a,s)
+                                 def_nodes,d_a,s,M,weight,w_b)
         
     elif strategy=="obd": 
         #ordered
@@ -539,14 +761,14 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info):
             pos+=len(layer)
             
         #simulation
-        observables[:,:]=explore_nw_bfs(o,links_o,update_rule,n_a,n_n,def_nodes,\
-                                     order,d_a,s)
+        observables[:,:]=explore_nw_obd(o,links_o,update_rule,n_a,n_n,def_nodes,\
+                                     order,d_a,s,M,weight,w_b)
         
     elif strategy=="rw":
         #random walk no modify
         #exploration
         observables[:,:]=explore_nw_rw(o,links_o,update_rule,n_a,n_n,def_nodes,\
-                                    False,d_a,s)
+                                    False,d_a,s,M,weight,w_b)
     
     return observables
 
@@ -573,16 +795,21 @@ def statistics(x):
 
 #%%
 
-def main_program(N,k,r,update_rule,N_i,rule,strategy):
-    """Executes realization N_i times and save the data at folder data,
-    saves the time evolution.
+def main_program(N,k,r,update_rule,N_i,rule,strategy,M,weight):
+    """Executes N_i realization and saves the data at the folder data:
+    saves the time evolution in time_evo_simulations_biases folder.
     Inputs:
         - N: number of nodes.
         - k: expected number of connections per node.
         - r: noise [0,0.5]
         - update_rule: function.
         - N_i: number of executions to average.
-        - rule: str of the rule to save the data file."""
+        - rule: str of the rule to save the data file.
+        - strategy: str of the strategy used.
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)
+        - weight: function of one variable, used to calculate the wieght of 
+        each node (only used for ordering effects)"""
     
     
     results=np.zeros((N,5,N_i))
@@ -592,7 +819,8 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy):
         GTN=ground_truth_network(N, k)
         s,links,n_a,n_n,G=GTN
         observer_info=observer(s, links, r, n_a, n_n)
-        obs=exploration(N, k, r, update_rule, strategy,GTN, observer_info)
+        obs=exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight
+                        ,rule)
         results[:,:,i]=obs[:,:]
         
     from os.path import exists
@@ -604,10 +832,14 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy):
         makedirs(directory)
         
     #save the data
-
-    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-        +"_"+str(N_i)+".npz"
-    
+        
+    if rule=="mr_ambiguity":
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+            +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
+    else:
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+            +"_"+str(N_i)+".npz"
+            
     np.savez_compressed(directory+name,r=results)
 
 #%%
@@ -616,5 +848,10 @@ k=20
 N=1000
 N_i=1000
 #%%
-for r in r_values:
-    main_program(N,k,r,update_rn,N_i,"rn","rs")
+weight=prim_lin
+M_list=[0.6,0.7,0.8,0.9]
+for M in M_list:
+    if M!=0.75:
+        for r in r_values:
+            main_program(N,k,r,update_majority_ambiguity,N_i,"mr_ambiguity"\
+                         ,"rs",M,weight)

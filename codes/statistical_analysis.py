@@ -315,6 +315,15 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index):
     ax.plot(r_values,means,linestyle='none',marker='o',markersize=2,
             color=cmap(0))
     
+    from matplotlib.lines import Line2D
+    legend_elements = [
+    Line2D([0], [0], color=cmap(0.67), lw=2, label='Median value'),
+    Line2D([0], [0], marker='o', color='w', label='Mean value',
+           markerfacecolor=cmap(0), markersize=5)
+    ]
+    
+    ax.legend(handles=legend_elements)
+    
     ax.set_xlim(0, 0.501)
     ax.set_ylim(-1,1)
     ticks = np.arange(0, 0.51, 0.1)
