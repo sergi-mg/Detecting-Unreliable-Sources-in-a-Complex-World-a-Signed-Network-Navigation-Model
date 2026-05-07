@@ -163,7 +163,10 @@ def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory)
     
 #Histogram function
 
-def histogram_program(N,N_i,k,r,rule,strategy,index):
+def histogram_program(N,N_i,k,r,rule,strategy,index):    
+    """Creates a histogram for the specified noise (r), expected number
+    of conncetions (k), rule and strategy for the variable corresponding
+    to index (d(t),q_def(t),q(t),d_max(t),<d>(t))."""
     
     #reading the data file
     
@@ -189,6 +192,12 @@ def histogram_program(N,N_i,k,r,rule,strategy,index):
 
 @njit
 def histogram(N,data,xmin,xmax,nbox):
+    """Returns the histogram of data (N-sized vector) with nbox boxes between
+    xmin and xmax. Outputs: vhis,errhis,xhis,h
+        - vhis: values of each box.
+        - errhis: uncertainty associated to the values.
+        - xhis: position of the boxes.
+        - h: box width."""
     
     h=(xmax-xmin)/nbox
     valorsx=np.zeros((nbox+1),dtype="float64")
@@ -215,6 +224,7 @@ def histogram(N,data,xmin,xmax,nbox):
     return vhis,errhis,xhis,h
 
 def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
+    """Plots the histogram along the mean value."""
     
     #folder
     directory_save="../images/biases/histograms/"
