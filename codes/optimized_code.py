@@ -39,7 +39,6 @@ It is important to use the corresponding strings to identify each case:
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
-    2. Random walk: rw (note that this strategy can only be used with No bias)
 """
 
 
@@ -58,30 +57,9 @@ def prim_lin(t):
     return (N-t)/N 
 
 @njit
-def prim_exp(t):
-    l=1
-    return np.exp(-l*t) 
-
-@njit
-def prim_pow(t):
-    a=2
-    return (t+1)**-a
-
-@njit
 def rec_lin(t):
     N=1000
     return (t+1)/N 
-
-@njit
-def rec_exp(t):
-    l=-1
-    return np.exp(l*t) 
-
-@njit
-def rec_pow(t):
-    a=2
-    return (t+1)**a
-
 
 #%%
 @njit    
@@ -100,7 +78,8 @@ def update_majority(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated s_o vector using the majority rule.
     s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -129,7 +108,8 @@ def update_majority_weighted(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated s_o vector using the majority rule (weighted).
     s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -158,7 +138,8 @@ def update_majority_anchor(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated s_o vector using the majority rule (anchoring bias).
     s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -194,7 +175,8 @@ def update_majority_ambiguity(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated s_o vector using the majority rule (ambiguity bias).
     s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -229,7 +211,8 @@ def update_rn(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated o matrix using the random neighbour rule.
     s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -257,7 +240,8 @@ def update_rn_weighted(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated o matrix using the random neighbour rule (weighted).
     s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -274,13 +258,14 @@ def update_rn_weighted(links,s_o,n,n_d,k,k_d,i_s,M,w):
     w_d_n = w[n_d].copy()
     #random selection
     a1=np.random.rand()*np.sum(w_d_n)
-    
+    c_n=n_d[-1]
     cumulative=0
     for j in range(k_d):
             cumulative+=w_d_n[j]
             if a1<cumulative:
                 c_n=n_d[j]
                 break
+    
             
     for idx in range(k):
         if n[idx] == c_n:
@@ -295,7 +280,8 @@ def update_rn_anchor(links,s_o,n,n_d,k,k_d,i_s,M,w):
     """Returns the updated o matrix using the random neighbour rule (anchoring
     bias). s_o must be a shape (N) array with each component from 1 to N being
     -1, 0 or +1. Inputs:
-        - links: 1D array (k) containing sign of the links, same order as in n.
+        - links: (N,k_max) array containing the links affected by noise, in 
+            the same order as the n_a matrix.
         - s_o: 1D (N) array containing the observer's opinion of each node.
         - n: 1D (k) array with the neighbours (index) of i_s node. 
         - k: number of neighbours of i_s node.
@@ -325,95 +311,7 @@ def update_rn_anchor(links,s_o,n,n_d,k,k_d,i_s,M,w):
 
     return s_o
 
-@njit
-def explore_nw_rw(s_o,links_o,update_rule,n_a,n_n,def_nodes,modify,d,s,
-                  M,weight,w_b):
-    """Explores the network with a random walk and returns the system's
-    evolution. Inputs:
-       - s_o: 1D (N) array containing the observer's opinion of each node.
-            Since here it acts as the initial condition, only one non-zero
-            component. 
-        - links_o: (N,k_max) array containing the links affected by noise, in 
-            the same order as the n_a matrix.
-        - n_a: shape (N,k_max) array containing the neihbours of each
-            node, if k_i<k_max the rest of the values are -1. 
-        - n_n: 1D array containing the number of neighbours (k_i) of each node.
-        - def_nodes: 1D boolean array where True corresponts to defined.
-        - modify: boolean indicating if a defined node can be modified.
-        - d: array containing the distance to node 0.
-        - s: 1D int32 array with values +1,-1 of the truth network.
-        - M: float, indicates the percentage of agreeing neighbours
-        needed to trust a node. (only for ambiguity bias if not ignored)
-        - weight: function of one variable, used to calculate the wieght of 
-        each node (only used for ordering effects)
-        - w_b: Boolean indicating if there is an ordering affect to apply.
-        Outputs: 
-            -observables: array (N,5) d(t),q_def(t),q(t),d_max(t),<d>(t)"""
 
-    #number of subjects
-    N=s_o.shape[0]
-    #opinion definition
-    s_o_new=s_o.copy()
-    #previous node
-    i_p=0
-    
-    #time evolutions
-    observables=np.zeros((N,5),dtype="float64")
-    #d(t),q_def(t),q(t),d_max(t),<d>(t)
-    observables[0,:]=np.array([0.,1.,1./N,0.,0.])
-    
-    def_n=def_nodes.copy()
-    
-
-    w=np.zeros(N)
-    if w_b==True:
-        w[0]=weight(0)
-    
-    iterations=0
-    i=-1
-    while np.sum(def_n)!=N:
-        iterations+=1
-        if iterations>N**2:
-            iterations=-10**7
-            print("More iterations than expected, the loop does not stop")
-        #node selected
-        i_s=n_a[i_p,np.random.randint(n_n[i_p])]
-        
-        if def_n[i_s]==True and modify==False:
-            None
-        else:
-            #defined neighbours of the selected node
-            k=n_n[i_s]
-            n=np.zeros(k,dtype=np.int32)
-            n[:]=n_a[i_s,:k]
-            k_d=np.sum(def_n[n])
-            n_d=np.zeros(k,dtype=np.int32)
-            counter=0
-            for j in n:
-                if def_n[j]==True:
-                    n_d[counter]=j
-                    counter+=1
-            
-            #update of opinions n,n_d,k,k_d
-            s_o_new=update_rule(links_o,s_o_new,n,n_d,k,k_d,i_s,M,w)
-            if w_b==True:
-                w[i_s]=weight(i+1) 
-            i+=1
-            
-            #observables: d(t),q_def(t),q(t),d_max(t),<d>(t)
-            observables[i+1,0]=d[i_s]*1.
-            s_o_i=s_o_new[i_s]
-            observables[i+1,1]=observables[i,1]*(i+1)/(i+2)+s_o_i*s[i_s]/(i+2)
-            observables[i+1,2]=accuracy(s,s_o_new,N)
-            observables[i+1,3] = max(observables[i,3], d[i_s])
-            observables[i+1,4]=observables[i,4]*(i)/(i+1)+d[i_s]/(i+1)
-        
-        #update of tracking variables
-        def_n[i_s]=True
-        i_p=i_s
-        
-
-    return observables
 
 @njit
 def explore_nw_obd(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s
@@ -465,7 +363,7 @@ def explore_nw_obd(s_o,links_o,update_rule,n_a,n_n,def_nodes,order,d,s
         n=np.zeros(k,dtype=np.int32)
         n[:]=n_a[i_s,:k]
         k_d=np.sum(def_n[n])
-        n_d=np.zeros(k,dtype=np.int32)
+        n_d=np.zeros(k_d,dtype=np.int32)
         counter=0
         for j in n:
             if def_n[j]==True:
@@ -550,7 +448,7 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s
         n=np.zeros(k,dtype=np.int32)
         n[:]=n_a[i_s,:k]
         k_d=np.sum(def_n[n])
-        n_d=np.zeros(k,dtype=np.int32)
+        n_d=np.zeros(k_d,dtype=np.int32)
         counter=0
         for j in n:
             if def_n[j]==True:
@@ -843,15 +741,70 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,M,weight):
     np.savez_compressed(directory+name,r=results)
 
 #%%
-r_values=np.arange(0.01,0.5005,0.01)
+r_values=np.arange(0.15,0.5001,0.01)
 k=20
 N=1000
 N_i=1000
 #%%
-weight=prim_lin
-M_list=[0.6,0.7,0.8,0.9]
-for M in M_list:
-    if M!=0.75:
-        for r in r_values:
-            main_program(N,k,r,update_majority_ambiguity,N_i,"mr_ambiguity"\
-                         ,"rs",M,weight)
+M=0.5
+
+for r in r_values:
+    #primacy
+    weight=prim_lin
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_primacy_linear"\
+                 ,"rs",M,weight)
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_primacy_linear"\
+                 ,"rs",M,weight)
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_primacy_linear"\
+                 ,"obd",M,weight)
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_primacy_linear"\
+                 ,"obd",M,weight)
+    #recency
+    weight=rec_lin
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_recency_linear"\
+                 ,"rs",M,weight)
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_recency_linear"\
+                 ,"rs",M,weight)
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_recency_linear"\
+                 ,"obd",M,weight)
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_recency_linear"\
+                 ,"obd",M,weight)
+    
+        
+#%%
+"""
+#######################################
+IMPORTANT INFORMATION BEFORE EXECUTING
+#######################################
+    
+This program provides the code to simulate the system with different 
+exploration strategies, node definition heuristic rules and biases.
+It is important to use the corresponding strings to identify each case:
+
+- Rule strings
+    1. Majority rule
+        A. No bias: mr
+        B. Anchoring bias: mr_anchor
+        C. Ambiguity bias: mr_ambiguity
+        D. Primacy linear: mr_primacy_linear
+        E. Primacy exponential: mr_primacy_exp
+        F. Primacy power law: mr_primacy_power
+        G. Rececny linear: mr_recency_linear
+        H. Rececny exponential: mr_recency_exp
+        I. Rececny power law: mr_recency_power
+        
+    2. Random neighbour
+        A. No bias: rn
+        B. Anchoring bias: rn_anchor
+        C. Primacy linear: rn_primacy_linear
+        D. Primacy exponential: rn_primacy_exp
+        E. Primacy power law: rn_primacy_power
+        F. Rececny linear: rn_recency_linear
+        G. Rececny exponential: rn_recency_exp
+        H. Rececny power law: rn_recency_power
+        
+- Strategy strings:
+    1. Random selection: rs
+    2. Ordered by distance: obd
+    2. Random walk: rw (note that this strategy can only be used with No bias)
+"""
