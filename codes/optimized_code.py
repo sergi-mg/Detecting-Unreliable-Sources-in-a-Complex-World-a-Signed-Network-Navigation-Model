@@ -661,12 +661,6 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight,rule):
         #simulation
         observables[:,:]=explore_nw_obd(o,links_o,update_rule,n_a,n_n,def_nodes,\
                                      order,d_a,s,M,weight,w_b)
-        
-    elif strategy=="rw":
-        #random walk no modify
-        #exploration
-        observables[:,:]=explore_nw_rw(o,links_o,update_rule,n_a,n_n,def_nodes,\
-                                    False,d_a,s,M,weight,w_b)
     
     return observables
 

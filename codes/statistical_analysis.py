@@ -93,8 +93,7 @@ def xifres(values,uncertainties,exp_max,exp_min):
                 break
     return values_c,uncertainties_c
 
-M=0
-def statistics_matrix(rule,k,r_values,N,N_i,strategy,index):
+def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,M=0):
     """Reads the files for k and r (integer and 1D array) indicated and returns
     the mean and the standard deviation of the corresponding index associated
     variable (d(t),q_def(t),q(t),d_max(t),<d>(t)) as a function of time."""
@@ -151,14 +150,14 @@ def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy,theory):
         plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
                      linestyle="none",marker="o",markersize=2,c=cmap(0)
                      ,label="Simulations")
-        plt.legend()
+        plt.legend(fontsize=18)
     else:
         plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
                      linestyle="none",marker="o",markersize=2,c=cmap(0))
     
     plt.ylim([0,1])
-    plt.xlabel("$r$")
-    plt.ylabel(r"$\langle q \rangle$")
+    plt.xlabel("$r$",fontsize=18)
+    plt.ylabel(r"$\langle q \rangle$",fontsize=18)
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.close()
@@ -197,10 +196,59 @@ def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory)
                      linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
                      label=biases_list[i])
     
-    plt.legend()
+    plt.legend(fontsize=18)
     plt.ylim([0,1])
-    plt.xlabel("$r$")
-    plt.ylabel(r"$\langle q \rangle$")
+    plt.xlabel("$r$",fontsize=18)
+    plt.ylabel(r"$\langle q \rangle$",fontsize=18)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
+    plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
+    plt.close()
+    
+def temporal_evo(results_list,r_values,r_index,N,N_i,k,rule,
+                 biases_list,ylabel,var):
+    """Saves a plot with <q>(r) for the corresponding rule and exploration
+    strategy"""
+    
+    N_b=len(biases_list)
+    r=r_values[r_index]
+    
+    #folder
+    
+    directory_save="../images/biases/temporal_evolution/"
+    if not exists(directory_save):
+        makedirs(directory_save)
+        
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")
+        
+    name=var+"_"+rule+"_"+str(N)+"_"+str(k)+"_"+str(N_i)\
+        +"_"+str(round(r,2))+"_"
+        
+    #plot
+        
+    cmap=plt.get_cmap("viridis") 
+    plt.figure()
+        
+    for i in range(N_b):
+        results=results_list[i]
+        plt.errorbar(np.arange(0,N)/N,results[:,r_index,0],
+                     xerr=0,yerr=results[:,r_index,1],
+                     linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
+                     label=biases_list[i])
+    
+    plt.legend(fontsize=18)
+    #plt.ylim([0,1])
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.grid(True, which="both", linestyle="--", alpha=0.4)
+    plt.xlabel("$t$",fontsize=18)
+    plt.ylabel(ylabel,fontsize=18)
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.close()
@@ -297,10 +345,12 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
     plt.axvline(mean, color=cmap(0.67), linestyle='--',
                 label=f'Average value={mean:.2f}')
 
-    plt.legend()
+    plt.legend(fontsize=18)
     #plt.xlim([-1,1])
-    plt.xlabel(r"$\langle q \rangle$")
-    plt.ylabel("$p$")
+    plt.xlabel(r"$\langle q \rangle$",fontsize=18)
+    plt.ylabel("$p$",fontsize=18)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.close()
@@ -382,10 +432,11 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index):
     ax.set_ylim(-1,1)
     ticks = np.arange(0, 0.51, 0.1)
     ax.set_xticks(ticks)
+    ax.tick_params(axis='both', labelsize=16)
     ax.set_xticklabels([f"{t:.1f}" for t in ticks])
     
-    ax.set_xlabel(r"$r$")
-    ax.set_ylabel(r"$\langle q \rangle$")
+    ax.set_xlabel(r"$r$",fontsize=18)
+    ax.set_ylabel(r"$\langle q \rangle$",fontsize=18)
     
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
@@ -395,13 +446,18 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index):
     
     
 #%%
+#parameter's definition
 r_values=np.arange(0.0,0.5005,0.01)
 k=20
 N=1000
 N_i=1000
 
 #%%
-#data reading (final accuracy)
+#data reading 
+
+#index: 0-d(t),1-q_def(t),2-q(t),3-d_max(t),4-<d>(t)
+
+#Results for the global accuracy q
 
 #majority rule - random selection
 mr_rs=statistics_matrix("mr", k, r_values, N, N_i, "rs", 2)
@@ -433,13 +489,14 @@ rn_obd_r=statistics_matrix("rn_recency_linear", k, r_values, N, N_i, "obd", 2)
 obd_ambiguity=[mr_obd]
 rs_ambiguity=[mr_rs]
 for i in range(4):
-    M=0.6+i*0.1
-    A=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "rs", 2)
+    M_i=0.6+i*0.1
+    A=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "rs", 2, M=M_i)
     rs_ambiguity.append(A)
-    B=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "obd", 2)
+    B=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "obd", 2,M=M_i)
     obd_ambiguity.append(B)
 
 #%%
+#Comparison of the biases' effects
 
 #majority rule - random selection
 
@@ -472,25 +529,14 @@ rn_obd_bias=["Without bias","Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(rn_obd_list, r_values, N, N_i, k, "rn", "obd", rn_obd_bias,True)
-#%%
+
 #percentage threshold dependance in the ambiguity effect
 names=["Without bias","$M=60\%$","$M=70\%$","$M=80\%$","$M=90\%$"]
 #obd
 biases_plots(obd_ambiguity, r_values, N, N_i, k, "mr", "obd_amb", names,False)
+#random selection
 biases_plots(rs_ambiguity, r_values, N, N_i, k, "mr", "rs_amb", names,False)
 
-#%%
-#individual plots
-final_accuracy_plot(mr_rs, r_values, N, N_i, k, "mr", "rs",False)
-final_accuracy_plot(mr_rs_amb, r_values, N, N_i, k, "mr_amb", "rs",False)
-final_accuracy_plot(mr_rs_anc, r_values, N, N_i, k, "mr_anchor", "rs",False)
-final_accuracy_plot(mr_obd, r_values, N, N_i, k, "mr", "obd",False)
-final_accuracy_plot(mr_obd_amb, r_values, N, N_i, k, "mr_amb", "obd",False)
-final_accuracy_plot(mr_obd_anc, r_values, N, N_i, k, "mr_anchor", "obd",False)
-final_accuracy_plot(rn_rs, r_values, N, N_i, k, "rn", "rs",True)
-final_accuracy_plot(rn_rs_anc, r_values, N, N_i, k, "rn_anchor", "rs",True)
-final_accuracy_plot(rn_obd, r_values, N, N_i, k, "rn", "obd",True)
-final_accuracy_plot(rn_obd_anc, r_values, N, N_i, k, "rn_anchor", "obd",True)
 
 #%%
 #box plots
@@ -551,7 +597,37 @@ for r in r_hist:
     histogram_program(N,N_i,k,r,"rn_primacy_linear","obd",2)
     histogram_program(N,N_i,k,r,"rn_recency_linear","obd",2)
     
-    
+#%%
+#temporal evolution
+#data
+mr_obd_d=statistics_matrix("mr", k, r_values, N, N_i, "obd", 0)
+mr_obd_q=statistics_matrix("mr", k, r_values, N, N_i, "obd", 1)
+mr_rs_d=statistics_matrix("mr", k, r_values, N, N_i, "rs", 0)
+mr_rs_q=statistics_matrix("mr", k, r_values, N, N_i, "rs", 1)
+
+rn_obd_d=statistics_matrix("rn", k, r_values, N, N_i, "obd", 0)
+rn_obd_q=statistics_matrix("rn", k, r_values, N, N_i, "obd", 1)
+rn_rs_d=statistics_matrix("rn", k, r_values, N, N_i, "rs", 0)
+rn_rs_q=statistics_matrix("rn", k, r_values, N, N_i, "rs", 1)
+
+#%%
+#plots
+
+strategies=["Random Selection","Ordered by distance"]
+
+y_label=r"$\langle d \rangle$"
+d_list=[mr_rs_d,mr_obd_d]
+temporal_evo(d_list,r_values,10,N,N_i,k,"mr",strategies,y_label,"d")
+
+d_list=[rn_rs_d,rn_obd_d]
+temporal_evo(d_list,r_values,10,N,N_i,k,"rn",strategies,y_label,"d")
+
+y_label=r"$\langle q_{def} \rangle$"
+q_list=[mr_rs_q,mr_obd_q]
+temporal_evo(q_list,r_values,10,N,N_i,k,"mr",strategies,y_label,"q")
+
+q_list=[rn_rs_q,rn_obd_q]
+temporal_evo(q_list,r_values,10,N,N_i,k,"rn",strategies,y_label,"q")
 #%%
 """
 #######################################
