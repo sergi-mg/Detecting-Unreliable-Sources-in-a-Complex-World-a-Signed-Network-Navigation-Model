@@ -39,6 +39,9 @@ It is important to use the corresponding strings to identify each case:
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
+    
+- Network topotlogy (without biases):
+    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
 """
 
 
@@ -478,11 +481,115 @@ def explore_nw_r(s_o,links_o,update_rule,n_a,n_n,e_n,def_nodes,d,s
         
     return observables
 
-def ground_truth_network(N,k):
-    """Generates the ground truth network.
+
+def ground_truth_network_BA(N,k,p_rewiring):
+    """Generates the ground truth network: Barabasi-Albert.
+    Inputs:
+        - N: number of nodes.
+        - k: expected number of edges per node (must be even).
+        - p_rewiring: probability of rewiring
+    Outputs: 
+        - s: 1D int32 array with values +1,-1.
+        - links: shape (N,k_max) array containing the sign of the links given
+            by si*sj, in the same order as neighbours_array
+        - neighbours_array: shape (N,k_max) array containing the neihbours
+            of each node, if k_i<k_max the rest of the values are -1.
+        - num_neighbours: 1D array containing the number of neighbours 
+            of each node.
+        - G: network."""
+        
+    #nodes' values
+    s=1-2*np.random.randint(0,2,N)
+    
+    if k % 2 != 0:
+        raise ValueError("k must be even since m=k/2\
+                         model implementation.")
+    
+    m=k/2
+        
+    G=nx.barabasi_albert_graph(N, m)
+    
+    #list of neighbours
+    neighbours=[[] for _ in range(N)]
+    for i, j in G.edges():
+        neighbours[i].append(j)
+        neighbours[j].append(i) 
+        
+    #maximum number of neighbours
+    kmax=max(len(nbrs) for nbrs in neighbours)
+    
+    #neighbour's array
+    neighbours_array=np.full((N, kmax), -1, dtype=np.int32)
+    num_neighbours=np.zeros(N, dtype=np.int32)
+    for i in range(N):
+        deg=len(neighbours[i])
+        num_neighbours[i]=deg
+        neighbours_array[i, :deg]=neighbours[i]
+        
+    #links array
+    links=np.zeros_like(neighbours_array,dtype=np.int32)
+    for i in range(N):
+        idx = neighbours_array[i, :num_neighbours[i]]
+        links[i, :num_neighbours[i]] = s[i] * s[idx]
+        
+    return s,links,neighbours_array,num_neighbours,G
+
+def ground_truth_network_WS(N,k,p_rewiring):
+    """Generates the ground truth network: Watts–Strogatz.
+    Inputs:
+        - N: number of nodes.
+        - k: expected number of edges per node (must be even).
+        - p_rewiring: probability of rewiring
+    Outputs: 
+        - s: 1D int32 array with values +1,-1.
+        - links: shape (N,k_max) array containing the sign of the links given
+            by si*sj, in the same order as neighbours_array
+        - neighbours_array: shape (N,k_max) array containing the neihbours
+            of each node, if k_i<k_max the rest of the values are -1.
+        - num_neighbours: 1D array containing the number of neighbours 
+            of each node.
+        - G: network."""
+        
+    #nodes' values
+    s=1-2*np.random.randint(0,2,N)
+    
+    if k % 2 != 0:
+        raise ValueError("k must be even for the Watts–Strogatz\
+                         model implementation.")
+        
+    G=nx.connected_watts_strogatz_graph(N, k, p_rewiring)
+    
+    #list of neighbours
+    neighbours=[[] for _ in range(N)]
+    for i, j in G.edges():
+        neighbours[i].append(j)
+        neighbours[j].append(i) 
+        
+    #maximum number of neighbours
+    kmax=max(len(nbrs) for nbrs in neighbours)
+    
+    #neighbour's array
+    neighbours_array=np.full((N, kmax), -1, dtype=np.int32)
+    num_neighbours=np.zeros(N, dtype=np.int32)
+    for i in range(N):
+        deg=len(neighbours[i])
+        num_neighbours[i]=deg
+        neighbours_array[i, :deg]=neighbours[i]
+        
+    #links array
+    links=np.zeros_like(neighbours_array,dtype=np.int32)
+    for i in range(N):
+        idx = neighbours_array[i, :num_neighbours[i]]
+        links[i, :num_neighbours[i]] = s[i] * s[idx]
+        
+    return s,links,neighbours_array,num_neighbours,G
+
+def ground_truth_network_ER(N,k,p_rewiring):
+    """Generates the ground truth network: Erdos-Renyi.
     Inputs:
         - N: number of nodes.
         - k: expected number of edges per node.
+        - p_rewiring: value for WS, not used here
     Outputs: 
         - s: 1D int32 array with values +1,-1.
         - links: shape (N,k_max) array containing the sign of the links given
@@ -687,7 +794,8 @@ def statistics(x):
 
 #%%
 
-def main_program(N,k,r,update_rule,N_i,rule,strategy,M,weight):
+def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
+                 M=0,p_r=0):
     """Executes N_i realization and saves the data at the folder data:
     saves the time evolution in time_evo_simulations_biases folder.
     Inputs:
@@ -698,17 +806,19 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,M,weight):
         - N_i: number of executions to average.
         - rule: str of the rule to save the data file.
         - strategy: str of the strategy used.
-        - M: float, indicates the percentage of agreeing neighbours
-        needed to trust a node. (only for ambiguity bias if not ignored)
         - weight: function of one variable, used to calculate the wieght of 
-        each node (only used for ordering effects)"""
+        each node (only used for ordering effects)
+        - GTN_network: function indicating which topology is used.
+        - p_r: rewiring probability, only for Watts-Strogatz
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)"""
     
     
     results=np.zeros((N,5,N_i))
     
     for i in range(N_i):
         np.random.seed(i+10)
-        GTN=ground_truth_network(N, k)
+        GTN=GTN_network(N, k, p_r)
         s,links,n_a,n_n,G=GTN
         observer_info=observer(s, links, r, n_a, n_n)
         obs=exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight
@@ -728,6 +838,9 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,M,weight):
     if rule=="mr_ambiguity":
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
             +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
+    elif p_r!=0:
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+            +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
     else:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
             +"_"+str(N_i)+".npz"
@@ -735,34 +848,45 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,M,weight):
     np.savez_compressed(directory+name,r=results)
 
 #%%
-r_values=np.arange(0.15,0.5001,0.01)
+r_values=np.arange(0.,0.5001,0.01)
 k=20
 N=1000
 N_i=1000
 #%%
-M=0.5
-
+weight=prim_lin
 for r in r_values:
-    #primacy
-    weight=prim_lin
-    main_program(N,k,r,update_rn_weighted,N_i,"rn_primacy_linear"\
-                 ,"rs",M,weight)
-    main_program(N,k,r,update_majority_weighted,N_i,"mr_primacy_linear"\
-                 ,"rs",M,weight)
-    main_program(N,k,r,update_rn_weighted,N_i,"rn_primacy_linear"\
-                 ,"obd",M,weight)
-    main_program(N,k,r,update_majority_weighted,N_i,"mr_primacy_linear"\
-                 ,"obd",M,weight)
-    #recency
-    weight=rec_lin
-    main_program(N,k,r,update_rn_weighted,N_i,"rn_recency_linear"\
-                 ,"rs",M,weight)
-    main_program(N,k,r,update_majority_weighted,N_i,"mr_recency_linear"\
-                 ,"rs",M,weight)
-    main_program(N,k,r,update_rn_weighted,N_i,"rn_recency_linear"\
-                 ,"obd",M,weight)
-    main_program(N,k,r,update_majority_weighted,N_i,"mr_recency_linear"\
-                 ,"obd",M,weight)
+    #Watts-Strogatz
+    main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
+                 ground_truth_network_WS,p_r=0.001)
+    main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
+                 ground_truth_network_WS,p_r=0.001)
+    
+    main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
+                 ground_truth_network_WS,p_r=0.001)
+    main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
+                 ground_truth_network_WS,p_r=0.001)
+    
+    main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
+                 ground_truth_network_WS,p_r=0.01)
+    main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
+                 ground_truth_network_WS,p_r=0.01)
+    
+    main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
+                 ground_truth_network_WS,p_r=0.01)
+    main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
+                 ground_truth_network_WS,p_r=0.01)
+    
+    #Barabasi-Albert
+    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
+                 ground_truth_network_BA)
+    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
+                 ground_truth_network_BA)
+    
+    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
+                 ground_truth_network_BA)
+    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
+                 ground_truth_network_BA)
+
     
         
 #%%
@@ -800,5 +924,7 @@ It is important to use the corresponding strings to identify each case:
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
-    2. Random walk: rw (note that this strategy can only be used with No bias)
+    
+- Network topotlogy (without biases):
+    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
 """
