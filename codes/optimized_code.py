@@ -505,7 +505,7 @@ def ground_truth_network_BA(N,k,p_rewiring):
         raise ValueError("k must be even since m=k/2\
                          model implementation.")
     
-    m=k/2
+    m=k//2
         
     G=nx.barabasi_albert_graph(N, m)
     
@@ -641,7 +641,7 @@ def ground_truth_network_ER(N,k,p_rewiring):
         
     return s,links,neighbours_array,num_neighbours,G
 
-def observer(s,links,r,n_a,n_n):
+def observer(s,links,r,n_a,n_n,network):
     """Generates the obersver variables.
     Inputs:
         - s: 1D int32 array with values +1,-1.
@@ -659,22 +659,28 @@ def observer(s,links,r,n_a,n_n):
          - links_o: (N,k_max) array containing the links affected by noise, in 
              the same order as the n_a matrix.
         - defined: 1D boolean array where True corresponds to defined.
-        - eligible: 1D boolean array where True corresponds to being eligible."""
+        - eligible: 1D boolean array where True corresponds to being eligible.
+        -i_n: initial node"""
         
     N=len(s)
     
-    
+    i_n=0
+    #initial node
+    if network is ground_truth_network_BA:
+        i_n=np.random.randint(N)
+        
     #o matrix
     s_o=np.zeros((N),dtype=int)
-    s_o[0]=s[0]
+    s_o[i_n]=s[i_n]
+    
     
     #defined nodes
     defined=np.full((N),False,dtype=np.bool_)
-    defined[0]=True
+    defined[i_n]=True
     
     #eligible nodes
     eligible=np.full((N),False,dtype=np.bool_)
-    eligible[n_a[0][:n_n[0]]]=True
+    eligible[n_a[i_n][:n_n[i_n]]]=True
     
     #links
     links_o=np.zeros_like(n_a)
@@ -697,7 +703,7 @@ def observer(s,links,r,n_a,n_n):
                         links_o[j, idx2]=val
                         break
     
-    return s_o,links_o,defined,eligible
+    return s_o,links_o,defined,eligible,i_n
 
 def exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight,rule):
     """Excutes the exploration of the network for the 3
@@ -709,7 +715,7 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight,rule):
         - update_rule: function.
         - strategy: string with the strategy name.
         - GTN: tupple (s,J,n_a,n_n,G)
-        - observer_info: tupple (o,J_o,def_nodes,eli_nodes)
+        - observer_info: tupple (o,J_o,def_nodes,eli_nodes,i_n)
         - M: float, indicates the percentage of agreeing neighbours
         needed to trust a node. (only for ambiguity bias if not ignored)
         - weight: function of one variable, used to calculate the wieght of 
@@ -733,11 +739,11 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight,rule):
     #ground truth network
     s,links,n_a,n_n,G=GTN
     #observer
-    o,links_o,def_nodes,eli_nodes=observer_info
+    o,links_o,def_nodes,eli_nodes,i_n=observer_info
     
     #distances
     d_a = np.full(N, -1, dtype=np.int32)
-    for node, d in nx.single_source_shortest_path_length(G, 0).items():
+    for node, d in nx.single_source_shortest_path_length(G, i_n).items():
         d_a[node] = d
     
     #results
@@ -820,7 +826,7 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
         np.random.seed(i+10)
         GTN=GTN_network(N, k, p_r)
         s,links,n_a,n_n,G=GTN
-        observer_info=observer(s, links, r, n_a, n_n)
+        observer_info=observer(s, links, r, n_a, n_n,GTN_network)
         obs=exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight
                         ,rule)
         results[:,:,i]=obs[:,:]
@@ -848,14 +854,15 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
     np.savez_compressed(directory+name,r=results)
 
 #%%
-r_values=np.arange(0.,0.5001,0.01)
+r_values=np.arange(0.15,0.5001,0.01)
 k=20
 N=1000
 N_i=1000
+
 #%%
 weight=prim_lin
 for r in r_values:
-    #Watts-Strogatz
+    """#Watts-Strogatz
     main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
                  ground_truth_network_WS,p_r=0.001)
     main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
@@ -874,7 +881,7 @@ for r in r_values:
     main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
                  ground_truth_network_WS,p_r=0.01)
     main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
-                 ground_truth_network_WS,p_r=0.01)
+                 ground_truth_network_WS,p_r=0.01)"""
     
     #Barabasi-Albert
     main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
@@ -887,7 +894,43 @@ for r in r_values:
     main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
                  ground_truth_network_BA)
 
-    
+#%%
+#k_dependency
+"""r_values=np.arange(0.47,0.5001,0.01)
+k_values=[10,30,40,50]
+N=1000
+N_i=1000
+weight=prim_lin
+for r in r_values:
+    for k in k_values:
+        main_program(N,k,r,update_majority,N_i,"mr","rs",weight,
+                     ground_truth_network_ER)
+        main_program(N,k,r,update_majority,N_i,"mr","obd",weight,
+                     ground_truth_network_ER)
+        
+        main_program(N,k,r,update_rn,N_i,"rn","rs",weight,
+                     ground_truth_network_ER)
+        main_program(N,k,r,update_rn,N_i,"rn","obd",weight,
+                     ground_truth_network_ER)"""
+
+#%%
+#N_dependency
+"""r_values=np.arange(0.23,0.5001,0.01)
+k=20
+N_values=[100,500]
+N_i=1000
+weight=prim_lin
+for r in r_values:
+    for N in N_values:
+        main_program(N,k,r,update_majority,N_i,"mr","rs",weight,
+                     ground_truth_network_ER)
+        main_program(N,k,r,update_majority,N_i,"mr","obd",weight,
+                     ground_truth_network_ER)
+        
+        main_program(N,k,r,update_rn,N_i,"rn","rs",weight,
+                     ground_truth_network_ER)
+        main_program(N,k,r,update_rn,N_i,"rn","obd",weight,
+                     ground_truth_network_ER)"""
         
 #%%
 """

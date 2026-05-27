@@ -40,6 +40,9 @@ It is important to use the corresponding strings to identify each case:
     1. Random selection: rs
     2. Ordered by distance: obd
     2. Random walk: rw (note that this strategy can only be used with No bias)
+    
+- Network topotlogy (without biases):
+    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
 """
 
 import matplotlib.pyplot as plt
@@ -93,7 +96,8 @@ def xifres(values,uncertainties,exp_max,exp_min):
                 break
     return values_c,uncertainties_c
 
-def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,M=0):
+
+def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,M=0,p_r=0):
     """Reads the files for k and r (integer and 1D array) indicated and returns
     the mean and the standard deviation of the corresponding index associated
     variable (d(t),q_def(t),q(t),d_max(t),<d>(t)) as a function of time."""
@@ -107,11 +111,16 @@ def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,M=0):
     for j in range(N_r):
         r=r_values[j]
         #reading the file
-        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-            +"_"+str(N_i)+".npz"
         if M!=0:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-                +"_"+str(N_i)+"_"+str(M)+".npz"
+                +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
+        elif p_r!=0:
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+        else:
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+".npz"
+                
         matrix=np.load(directory+name)
         data=matrix["r"].astype(np.float32) #shape (N,5,N_i)
         
@@ -150,7 +159,8 @@ def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy,theory):
         plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
                      linestyle="none",marker="o",markersize=2,c=cmap(0)
                      ,label="Simulations")
-        plt.legend(fontsize=18)
+        plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
+)
     else:
         plt.errorbar(r_values,results[-1,:,0],xerr=0,yerr=results[-1,:,1],
                      linestyle="none",marker="o",markersize=2,c=cmap(0))
@@ -196,10 +206,67 @@ def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory)
                      linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
                      label=biases_list[i])
     
-    plt.legend(fontsize=18)
+    plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
+)
     plt.ylim([0,1])
     plt.xlabel("$r$",fontsize=18)
     plt.ylabel(r"$\langle q \rangle$",fontsize=18)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
+    plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
+    plt.close()
+    
+def improvement_plots(reference,results_list,r_values,N,N_i,k,rule,strategy,
+                      biases_list,theory):
+    """Saves a plot with <q>(r) for the corresponding rule and exploration
+    strategy"""
+    
+    N_b=len(biases_list)
+    
+    #improvement calculus
+    values=np.zeros((len(r_values),len(results_list)))
+    unc=np.zeros_like(values)
+    eps=10**(-10)
+    for i in range(len(results_list)):
+        values[:,i]=results_list[i][-1,:,0]/(reference[-1,:,0]+eps)
+        unc[:,i]=results_list[i][-1,:,1]/(reference[-1,:,0]+eps)+\
+        reference[-1,:,1]*results_list[i][-1,:,1]/(reference[-1,:,0]+eps)**2
+        
+        values[:,i],unc[:,i]=xifres(values[:,i],unc[:,i],10,-10)
+    
+    #folder
+    
+    directory_save="../images/biases/improvement/"
+    if not exists(directory_save):
+        makedirs(directory_save)
+        
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")
+        
+    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(N_i)+"_"
+        
+    #plot
+        
+    cmap=plt.get_cmap("viridis") 
+    plt.figure()
+    
+    if theory==True:
+        x=np.arange(0,0.501,0.005)
+        plt.plot(x,N**(-2.*x),c="black",label="Theoretical")
+        
+    for i in range(N_b):
+        plt.errorbar(r_values,values[:,i],xerr=0,yerr=unc[:,i],
+                     linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
+                     label=biases_list[i])
+    
+    plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
+)
+    plt.ylim([0,2])
+    plt.xlabel("$r$",fontsize=18)
+    plt.ylabel(r"$\langle q \rangle$/$\langle q_{ref} \rangle$",fontsize=18)
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
@@ -240,7 +307,8 @@ def temporal_evo(results_list,r_values,r_index,N,N_i,k,rule,
                      linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
                      label=biases_list[i])
     
-    plt.legend(fontsize=18)
+    plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
+)
     #plt.ylim([0,1])
     plt.xscale("log")
     plt.yscale("log")
@@ -345,7 +413,8 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
     plt.axvline(mean, color=cmap(0.67), linestyle='--',
                 label=f'Average value={mean:.2f}')
 
-    plt.legend(fontsize=18)
+    plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
+)
     #plt.xlim([-1,1])
     plt.xlabel(r"$\langle q \rangle$",fontsize=18)
     plt.ylabel("$p$",fontsize=18)
@@ -356,7 +425,7 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
     plt.close()
     
 
-def box_plot(rule,k,r_values,N,N_i,strategy,index):
+def box_plot(rule,k,r_values,N,N_i,strategy,index,M=0,p_r=0):
     """Reads the files for the indicated k and strategy and creates a box plot
     with the N_i values for each r.
     Strategies: Random Selection (0), Ordered by distance (1), 
@@ -373,8 +442,15 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index):
     for j in range(N_r):
         r=r_values[j]
         #reading the file
-        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-            +"_"+str(N_i)+".npz"
+        if M!=0:
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
+        elif p_r!=0:
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+        else:
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+".npz"
         matrix=np.load(directory+name)
         data=matrix["r"].astype(np.float32) #shape (N,5,N_i)
         
@@ -392,8 +468,17 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index):
         makedirs(directory_save+"pdf/")
     if not exists(directory_save+"png/"):
         makedirs(directory_save+"png/")
+        
+    if M!=0:
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
+            +"_"+str(N_i)+"_"+str(round(M,2))+"_"
+    elif p_r!=0:
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
+            +"_"+str(N_i)+"_"+str(round(p_r,3))+"_"
+    else:
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
+            +"_"+str(N_i)+"_"
     
-    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(N_i)+"_"
      
     fig, ax = plt.subplots()
     
@@ -426,7 +511,7 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index):
            markerfacecolor=cmap(0), markersize=5)
     ]
     
-    ax.legend(handles=legend_elements)
+    ax.legend(handles=legend_elements,fontsize=18)
     
     ax.set_xlim(0, 0.501)
     ax.set_ylim(-1,1)
@@ -494,6 +579,65 @@ for i in range(4):
     rs_ambiguity.append(A)
     B=statistics_matrix("mr_ambiguity", k, r_values, N, N_i, "obd", 2,M=M_i)
     obd_ambiguity.append(B)
+    
+#Watts-Strogatz
+#p_r=0.001
+mr_rs_WS_1=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 2, p_r=0.001)
+mr_obd_WS_1=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 2, p_r=0.001)
+rn_rs_WS_1=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 2, p_r=0.001)
+rn_obd_WS_1=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=0.001)
+#p_r=0.01
+mr_rs_WS_2=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 2, p_r=0.01)
+mr_obd_WS_2=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 2, p_r=0.01)
+rn_rs_WS_2=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 2, p_r=0.01)
+rn_obd_WS_2=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=0.01)
+
+#Barabasi-Albert
+mr_rs_BA=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 2)
+mr_obd_BA=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 2)
+rn_rs_BA=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 2)
+rn_obd_BA=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 2)
+
+#k_variability
+k_val=[10,20,30,40,50]
+obd_mr_k=[]
+rs_mr_k=[]
+obd_rn_k=[]
+rs_rn_k=[]
+for k in k_val:
+    A=statistics_matrix("mr", k, r_values, N, N_i, "rs", 2)
+    rs_mr_k.append(A)
+    B=statistics_matrix("mr", k, r_values, N, N_i, "obd", 2)
+    obd_mr_k.append(B)
+    C=statistics_matrix("rn", k, r_values, N, N_i, "rs", 2)
+    rs_rn_k.append(C)
+    D=statistics_matrix("rn", k, r_values, N, N_i, "obd", 2)
+    obd_rn_k.append(D)
+
+k=20
+#N_variability
+N_val=[100,500]
+obd_mr_N=[]
+rs_mr_N=[]
+obd_rn_N=[]
+rs_rn_N=[]
+
+for N in N_val:
+    A=statistics_matrix("mr", k, r_values, N, N_i, "rs", 2)
+    rs_mr_N.append(A)
+    B=statistics_matrix("mr", k, r_values, N, N_i, "obd", 2)
+    obd_mr_N.append(B)
+    C=statistics_matrix("rn", k, r_values, N, N_i, "rs", 2)
+    rs_rn_N.append(C)
+    D=statistics_matrix("rn", k, r_values, N, N_i, "obd", 2)
+    obd_rn_N.append(D)
+    
+obd_mr_N.append(mr_obd)
+rs_mr_N.append(mr_rs)
+obd_rn_N.append(rn_obd)
+rs_rn_N.append(rn_rs)
+
+N=1000
 
 #%%
 #Comparison of the biases' effects
@@ -505,6 +649,8 @@ mr_rs_bias=["Without bias", "Ambiguity effect" ,"Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(mr_rs_list, r_values, N, N_i, k, "mr", "rs", mr_rs_bias,False)
+improvement_plots(mr_rs_list[0],mr_rs_list[1:], r_values, N, N_i, k, "mr", "rs",
+                  mr_rs_bias[1:],False)
 
 #majority rule - ordered by distance
 
@@ -513,6 +659,8 @@ mr_obd_bias=["Without bias", "Ambiguity effect" ,"Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(mr_obd_list, r_values, N, N_i, k, "mr", "obd", mr_obd_bias,False)
+improvement_plots(mr_obd_list[0],mr_obd_list[1:], r_values, N, N_i, k, "mr", "obd",
+                  mr_obd_bias[1:],False)
 
 #random neighbour - random selection
 
@@ -521,6 +669,8 @@ rn_rs_bias=["Without bias","Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(rn_rs_list, r_values, N, N_i, k, "rn", "rs", rn_rs_bias,True)
+improvement_plots(rn_rs_list[0],rn_rs_list[1:], r_values, N, N_i, k, "rn", "rs",
+                  rn_rs_bias[1:],False)
 
 #random neighbour - ordered by distance
 
@@ -529,6 +679,8 @@ rn_obd_bias=["Without bias","Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(rn_obd_list, r_values, N, N_i, k, "rn", "obd", rn_obd_bias,True)
+improvement_plots(rn_obd_list[0],rn_obd_list[1:], r_values, N, N_i, k, "rn", "obd",
+                  rn_obd_bias[1:],False)
 
 #percentage threshold dependance in the ambiguity effect
 names=["Without bias","$M=60\%$","$M=70\%$","$M=80\%$","$M=90\%$"]
@@ -536,6 +688,39 @@ names=["Without bias","$M=60\%$","$M=70\%$","$M=80\%$","$M=90\%$"]
 biases_plots(obd_ambiguity, r_values, N, N_i, k, "mr", "obd_amb", names,False)
 #random selection
 biases_plots(rs_ambiguity, r_values, N, N_i, k, "mr", "rs_amb", names,False)
+
+network=["ER", "WS, $p_r=0.001$", "WS, $p_r=0.01$", "BA" ]
+#network_topology
+network_obd_mr=[mr_obd,mr_obd_WS_1,mr_obd_WS_2,mr_obd_BA]
+biases_plots(network_obd_mr, r_values, N, N_i, k, "mr", "obd_network", network,False)
+
+network_obd_rn=[rn_obd,rn_obd_WS_1,rn_obd_WS_2,rn_obd_BA]
+biases_plots(network_obd_rn, r_values, N, N_i, k, "rn", "obd_network", network,False)
+
+network_rs_mr=[mr_rs,mr_rs_WS_1,mr_rs_WS_2,mr_rs_BA]
+biases_plots(network_rs_mr, r_values, N, N_i, k, "mr", "rs_network", network,False)
+
+network_rs_rn=[rn_rs,rn_rs_WS_1,rn_rs_WS_2,rn_rs_BA]
+biases_plots(network_rs_rn, r_values, N, N_i, k, "rn", "rs_network", network,False)
+
+#k dependancy
+k_list=[r"$\langle k \rangle=10$",r"$\langle k \rangle=20$",
+        r"$\langle k \rangle=30$",r"$\langle k \rangle=40$",
+        r"$\langle k \rangle=50$"]
+
+biases_plots(obd_mr_k, r_values, N, N_i, k, "mr", "obd_k", k_list ,False)
+biases_plots(rs_mr_k, r_values, N, N_i, k, "mr", "rs_k", k_list ,False)
+biases_plots(obd_rn_k, r_values, N, N_i, k, "rn", "obd_k", k_list ,False)
+biases_plots(rs_rn_k, r_values, N, N_i, k, "rn", "rs_k", k_list ,False)
+
+#k dependancy
+N_list=["$N=100$","$N=500$","$N=1000$"]
+
+biases_plots(obd_mr_N, r_values, N, N_i, k, "mr", "obd_N", N_list ,False)
+biases_plots(rs_mr_N, r_values, N, N_i, k, "mr", "rs_N", N_list ,False)
+biases_plots(obd_rn_N, r_values, N, N_i, k, "rn", "obd_N", N_list ,False)
+biases_plots(rs_rn_N, r_values, N, N_i, k, "rn", "rs_N", N_list ,False)
+
 
 
 #%%
@@ -565,6 +750,24 @@ box_plot("rn", k, r_values, N, N_i, "obd", 2)
 box_plot("rn_anchor", k, r_values, N, N_i, "obd", 2)
 box_plot("rn_primacy_linear", k, r_values, N, N_i, "obd", 2)
 box_plot("rn_recency_linear", k, r_values, N, N_i, "obd", 2)
+
+#Watts-Strogatz
+#p_r=0.001
+box_plot("mr_WS", k, r_values, N, N_i, "rs", 2, p_r=0.001)
+box_plot("mr_WS", k, r_values, N, N_i, "obd", 2, p_r=0.001)
+box_plot("rn_WS", k, r_values, N, N_i, "rs", 2, p_r=0.001)
+box_plot("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=0.001)
+#p_r=0.01
+box_plot("mr_WS", k, r_values, N, N_i, "rs", 2, p_r=0.01)
+box_plot("mr_WS", k, r_values, N, N_i, "obd", 2, p_r=0.01)
+box_plot("rn_WS", k, r_values, N, N_i, "rs", 2, p_r=0.01)
+box_plot("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=0.01)
+
+#Barabasi-Albert
+box_plot("mr_BA", k, r_values, N, N_i, "rs", 2)
+box_plot("mr_BA", k, r_values, N, N_i, "obd", 2)
+box_plot("rn_BA", k, r_values, N, N_i, "rs", 2)
+box_plot("rn_BA", k, r_values, N, N_i, "obd", 2)
 
 #%%
 #histograms
@@ -600,6 +803,7 @@ for r in r_hist:
 #%%
 #temporal evolution
 #data
+#Erdos-Renyi
 mr_obd_d=statistics_matrix("mr", k, r_values, N, N_i, "obd", 0)
 mr_obd_q=statistics_matrix("mr", k, r_values, N, N_i, "obd", 1)
 mr_rs_d=statistics_matrix("mr", k, r_values, N, N_i, "rs", 0)
@@ -610,8 +814,79 @@ rn_obd_q=statistics_matrix("rn", k, r_values, N, N_i, "obd", 1)
 rn_rs_d=statistics_matrix("rn", k, r_values, N, N_i, "rs", 0)
 rn_rs_q=statistics_matrix("rn", k, r_values, N, N_i, "rs", 1)
 
+#Watts-Strogatz
+
+#p_r=0.001
+mr_rs_WS_1_d=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 0, p_r=0.001)
+mr_rs_WS_1_q=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 1, p_r=0.001)
+mr_obd_WS_1_d=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 0, p_r=0.001)
+mr_obd_WS_1_q=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 1, p_r=0.001)
+
+rn_rs_WS_1_d=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 0, p_r=0.001)
+rn_rs_WS_1_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 1, p_r=0.001)
+rn_obd_WS_1_d=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 0, p_r=0.001)
+rn_obd_WS_1_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 1, p_r=0.001)
+
+#p_r=0.01
+mr_rs_WS_2_d=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 0, p_r=0.01)
+mr_rs_WS_2_q=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 1, p_r=0.01)
+mr_obd_WS_2_d=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 0, p_r=0.01)
+mr_obd_WS_2_q=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 1, p_r=0.01)
+
+rn_rs_WS_2_d=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 0, p_r=0.01)
+rn_rs_WS_2_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 1, p_r=0.01)
+rn_obd_WS_2_d=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 0, p_r=0.01)
+rn_obd_WS_2_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 1, p_r=0.01)
+
+#Barabasi-Albert
+mr_rs_BA_d=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 0)
+mr_rs_BA_q=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 1)
+mr_obd_BA_d=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 0)
+mr_obd_BA_q=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 1)
+
+rn_rs_BA_d=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 0)
+rn_rs_BA_q=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 1)
+rn_obd_BA_d=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 0)
+rn_obd_BA_q=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 1)
+
+#%%
+
+#k_dependency
+
+k_val=[10,20,30,40,50]
+obd_mr_k_d=[]
+rs_mr_k_d=[]
+obd_rn_k_d=[]
+rs_rn_k_d=[]
+obd_mr_k_q=[]
+rs_mr_k_q=[]
+obd_rn_k_q=[]
+rs_rn_k_q=[]
+for k_i in k_val:
+    A=statistics_matrix("mr", k_i, r_values, N, N_i, "rs", 0)
+    rs_mr_k_d.append(A)
+    A2=statistics_matrix("mr", k_i, r_values, N, N_i, "rs", 1)
+    rs_mr_k_q.append(A2)
+    
+    B=statistics_matrix("mr", k_i, r_values, N, N_i, "obd", 0)
+    obd_mr_k_d.append(B)
+    B2=statistics_matrix("mr", k_i, r_values, N, N_i, "obd", 1)
+    obd_mr_k_q.append(B2)
+    
+    C=statistics_matrix("rn", k_i, r_values, N, N_i, "rs", 0)
+    rs_rn_k_d.append(C)
+    C2=statistics_matrix("rn", k_i, r_values, N, N_i, "rs", 1)
+    rs_rn_k_q.append(C2)
+    
+    D=statistics_matrix("rn", k_i, r_values, N, N_i, "obd", 0)
+    obd_rn_k_d.append(D)
+    D2=statistics_matrix("rn", k_i, r_values, N, N_i, "obd", 1)
+    obd_rn_k_q.append(D2)
+
 #%%
 #plots
+
+#comparing strategies on Erdos-Renyi
 
 strategies=["Random Selection","Ordered by distance"]
 
@@ -628,6 +903,63 @@ temporal_evo(q_list,r_values,10,N,N_i,k,"mr",strategies,y_label,"q")
 
 q_list=[rn_rs_q,rn_obd_q]
 temporal_evo(q_list,r_values,10,N,N_i,k,"rn",strategies,y_label,"q")
+
+#comparing networks' topologies with the same strategy
+network=["ER", "WS, $p_r=0.001$", "WS, $p_r=0.01$", "BA" ]
+
+y_label=r"$\langle d \rangle$"
+d_list=[mr_rs_d,mr_rs_WS_1_d,mr_rs_WS_2_d,mr_rs_BA_d]
+temporal_evo(d_list,r_values,10,N,N_i,k,"mr_rs",network,y_label,"d")
+
+d_list=[mr_obd_d,mr_obd_WS_1_d,mr_obd_WS_2_d,mr_obd_BA_d]
+temporal_evo(d_list,r_values,10,N,N_i,k,"mr_obd",network,y_label,"d")
+
+d_list=[rn_rs_d,rn_rs_WS_1_d,rn_rs_WS_2_d,rn_rs_BA_d]
+temporal_evo(d_list,r_values,10,N,N_i,k,"rn_rs",network,y_label,"d")
+
+d_list=[rn_obd_d,rn_obd_WS_1_d,rn_obd_WS_2_d,rn_obd_BA_d]
+temporal_evo(d_list,r_values,10,N,N_i,k,"rn_obd",network,y_label,"d")
+
+y_label=r"$\langle q_{def} \rangle$"
+q_list=[mr_rs_q,mr_rs_WS_1_q,mr_rs_WS_2_q,mr_rs_BA_q]
+temporal_evo(q_list,r_values,10,N,N_i,k,"mr_rs",network,y_label,"q")
+
+q_list=[mr_obd_q,mr_obd_WS_1_q,mr_obd_WS_2_q,mr_obd_BA_q]
+temporal_evo(q_list,r_values,10,N,N_i,k,"mr_obd",network,y_label,"q")
+
+q_list=[rn_rs_q,rn_rs_WS_1_q,rn_rs_WS_2_q,rn_rs_BA_q]
+temporal_evo(q_list,r_values,10,N,N_i,k,"rn_rs",network,y_label,"q")
+
+q_list=[rn_obd_q,rn_obd_WS_1_q,rn_obd_WS_2_q,rn_obd_BA_q]
+temporal_evo(q_list,r_values,10,N,N_i,k,"rn_obd",network,y_label,"q")
+
+#%%
+#comparing k on ER
+k_list=[r"$\langle k \rangle=10$",r"$\langle k \rangle=20$",
+        r"$\langle k \rangle=30$",r"$\langle k \rangle=40$",
+        r"$\langle k \rangle=50$"]
+
+y_label=r"$\langle d \rangle$"
+
+temporal_evo(rs_mr_k_d,r_values,10,N,N_i,k,"mr_rs_k",k_list,y_label,"d")
+
+temporal_evo(obd_mr_k_d,r_values,10,N,N_i,k,"mr_obd_k",k_list,y_label,"d")
+
+temporal_evo(rs_rn_k_d,r_values,10,N,N_i,k,"rn_rs_k",k_list,y_label,"d")
+
+temporal_evo(obd_rn_k_d,r_values,10,N,N_i,k,"rn_obd_k",k_list,y_label,"d")
+
+y_label=r"$\langle q_{def} \rangle$"
+
+temporal_evo(rs_mr_k_q,r_values,10,N,N_i,k,"mr_rs_k",k_list,y_label,"q")
+
+temporal_evo(obd_mr_k_q,r_values,10,N,N_i,k,"mr_obd_k",k_list,y_label,"q")
+
+temporal_evo(rs_rn_k_q,r_values,10,N,N_i,k,"rn_rs_k",k_list,y_label,"q")
+
+temporal_evo(obd_rn_k_q,r_values,10,N,N_i,k,"rn_obd_k",k_list,y_label,"q")
+
+
 #%%
 """
 #######################################
@@ -664,4 +996,7 @@ It is important to use the corresponding strings to identify each case:
     1. Random selection: rs
     2. Ordered by distance: obd
     2. Random walk: rw (note that this strategy can only be used with No bias)
+    
+- Network topotlogy (without biases):
+    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
 """
