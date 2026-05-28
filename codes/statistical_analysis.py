@@ -97,7 +97,8 @@ def xifres(values,uncertainties,exp_max,exp_min):
     return values_c,uncertainties_c
 
 
-def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,M=0,p_r=0):
+def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",
+                      M=0,p_r=0):
     """Reads the files for k and r (integer and 1D array) indicated and returns
     the mean and the standard deviation of the corresponding index associated
     variable (d(t),q_def(t),q(t),d_max(t),<d>(t)) as a function of time."""
@@ -117,6 +118,9 @@ def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,M=0,p_r=0):
         elif p_r!=0:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+        elif c_BA!="Random":
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+"_"+c_BA+".npz"
         else:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+".npz"
@@ -425,7 +429,7 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
     plt.close()
     
 
-def box_plot(rule,k,r_values,N,N_i,strategy,index,M=0,p_r=0):
+def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=0):
     """Reads the files for the indicated k and strategy and creates a box plot
     with the N_i values for each r.
     Strategies: Random Selection (0), Ordered by distance (1), 
@@ -448,6 +452,9 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,M=0,p_r=0):
         elif p_r!=0:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+        elif c_BA!="Random":
+            name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+                +"_"+str(N_i)+"_"+c_BA+".npz"
         else:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+".npz"

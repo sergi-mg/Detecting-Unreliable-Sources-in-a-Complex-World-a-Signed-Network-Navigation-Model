@@ -641,7 +641,7 @@ def ground_truth_network_ER(N,k,p_rewiring):
         
     return s,links,neighbours_array,num_neighbours,G
 
-def observer(s,links,r,n_a,n_n,network):
+def observer(s,links,r,n_a,n_n,network,criteria_BA):
     """Generates the obersver variables.
     Inputs:
         - s: 1D int32 array with values +1,-1.
@@ -652,6 +652,8 @@ def observer(s,links,r,n_a,n_n,network):
             of each node, if k_i<k_max the rest of the values are -1.
         - n_n: 1D array containin the number of neighbours 
             of each node.
+        - criteria_BA: "Max", "Min", "Random", only for Ba, indicates the criteria to 
+        select the initial node.
     Outputs: 
         - s_o: 1D (N) array containing the observer's opinion of each node.
              Since here it acts as the initial condition, only one non-zero
@@ -667,7 +669,12 @@ def observer(s,links,r,n_a,n_n,network):
     i_n=0
     #initial node
     if network is ground_truth_network_BA:
-        i_n=np.random.randint(N)
+        if criteria_BA=="Max":
+            i_n=np.argmax(n_n)
+        if criteria_BA=="Min":
+            i_n=np.argmin(n_n)
+        else:
+            i_n=np.random.randint(N)
         
     #o matrix
     s_o=np.zeros((N),dtype=int)
@@ -800,7 +807,7 @@ def statistics(x):
 
 #%%
 
-def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
+def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,c_BA="Random",
                  M=0,p_r=0):
     """Executes N_i realization and saves the data at the folder data:
     saves the time evolution in time_evo_simulations_biases folder.
@@ -815,6 +822,8 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
         - weight: function of one variable, used to calculate the wieght of 
         each node (only used for ordering effects)
         - GTN_network: function indicating which topology is used.
+        - c_BA: "Max", "Min", "Random", only for Ba, indicates the criteria to 
+        select the initial node.
         - p_r: rewiring probability, only for Watts-Strogatz
         - M: float, indicates the percentage of agreeing neighbours
         needed to trust a node. (only for ambiguity bias if not ignored)"""
@@ -826,7 +835,7 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
         np.random.seed(i+10)
         GTN=GTN_network(N, k, p_r)
         s,links,n_a,n_n,G=GTN
-        observer_info=observer(s, links, r, n_a, n_n,GTN_network)
+        observer_info=observer(s, links, r, n_a, n_n,GTN_network,c_BA)
         obs=exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight
                         ,rule)
         results[:,:,i]=obs[:,:]
@@ -841,12 +850,15 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
         
     #save the data
         
-    if rule=="mr_ambiguity":
+    if M!=0:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
             +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
     elif p_r!=0:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
             +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+    elif c_BA!="Random":
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
+            +"_"+str(N_i)+"_"+c_BA+".npz"
     else:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
             +"_"+str(N_i)+".npz"
@@ -854,7 +866,7 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,
     np.savez_compressed(directory+name,r=results)
 
 #%%
-r_values=np.arange(0.15,0.5001,0.01)
+r_values=np.arange(0.,0.5001,0.01)
 k=20
 N=1000
 N_i=1000
@@ -862,38 +874,46 @@ N_i=1000
 #%%
 weight=prim_lin
 for r in r_values:
-    """#Watts-Strogatz
-    main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
-                 ground_truth_network_WS,p_r=0.001)
-    main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
-                 ground_truth_network_WS,p_r=0.001)
-    
-    main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
-                 ground_truth_network_WS,p_r=0.001)
-    main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
-                 ground_truth_network_WS,p_r=0.001)
-    
-    main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
-                 ground_truth_network_WS,p_r=0.01)
-    main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
-                 ground_truth_network_WS,p_r=0.01)
-    
-    main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
-                 ground_truth_network_WS,p_r=0.01)
-    main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
-                 ground_truth_network_WS,p_r=0.01)"""
-    
     #Barabasi-Albert
     main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
-                 ground_truth_network_BA)
+                 ground_truth_network_BA, c_BA="Min")
     main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
-                 ground_truth_network_BA)
+                 ground_truth_network_BA, c_BA="Min")
     
     main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
-                 ground_truth_network_BA)
+                 ground_truth_network_BA, c_BA="Min")
     main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
-                 ground_truth_network_BA)
+                 ground_truth_network_BA, c_BA="Min")
+    
+    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    
+    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
+                 ground_truth_network_BA, c_BA="Max")
 
+#%%
+r_values=np.arange(0.,0.5001,0.05)
+p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
+k=20
+N=1000
+N_i=1000
+for r in r_values:
+    for p_r in p_r_values:
+        #Watts-Strogatz
+        main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        
+        main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        
 #%%
 #k_dependency
 """r_values=np.arange(0.47,0.5001,0.01)
