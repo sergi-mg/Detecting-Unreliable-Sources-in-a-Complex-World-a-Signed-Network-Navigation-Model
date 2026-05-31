@@ -51,6 +51,7 @@ import scipy as sp
 from numba import njit
 from os.path import exists
 from os import makedirs
+import seaborn as sns
 
 
 #%%
@@ -98,7 +99,7 @@ def xifres(values,uncertainties,exp_max,exp_min):
 
 
 def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",
-                      M=0,p_r=0):
+                      M=0,p_r=-1):
     """Reads the files for k and r (integer and 1D array) indicated and returns
     the mean and the standard deviation of the corresponding index associated
     variable (d(t),q_def(t),q(t),d_max(t),<d>(t)) as a function of time."""
@@ -115,9 +116,9 @@ def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",
         if M!=0:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
-        elif p_r!=0:
+        elif p_r!=-1:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-                +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+                +"_"+str(N_i)+"_"+str(round(p_r,5))+".npz"
         elif c_BA!="Random":
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+"_"+c_BA+".npz"
@@ -429,7 +430,7 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
     plt.close()
     
 
-def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=0):
+def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
     """Reads the files for the indicated k and strategy and creates a box plot
     with the N_i values for each r.
     Strategies: Random Selection (0), Ordered by distance (1), 
@@ -449,9 +450,9 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=0):
         if M!=0:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+"_"+str(round(M,2))+".npz"
-        elif p_r!=0:
+        elif p_r!=-1:
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
-                +"_"+str(N_i)+"_"+str(round(p_r,3))+".npz"
+                +"_"+str(N_i)+"_"+str(round(p_r,5))+".npz"
         elif c_BA!="Random":
             name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(round(r,2))\
                 +"_"+str(N_i)+"_"+c_BA+".npz"
@@ -479,9 +480,9 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=0):
     if M!=0:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
             +"_"+str(N_i)+"_"+str(round(M,2))+"_"
-    elif p_r!=0:
+    elif p_r!=-1:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
-            +"_"+str(N_i)+"_"+str(round(p_r,3))+"_"
+            +"_"+str(N_i)+"_"+str(round(p_r,5))+"_"
     else:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
             +"_"+str(N_i)+"_"
@@ -535,6 +536,53 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=0):
     plt.show()
     plt.close()
     
+def heatmap(results_list,r_values,name):
+    
+    directory_save="../images/biases/heatmaps/"
+    if not exists(directory_save):
+        makedirs(directory_save)
+        
+    if not exists(directory_save+"pdf/"):
+        makedirs(directory_save+"pdf/")
+    if not exists(directory_save+"png/"):
+        makedirs(directory_save+"png/")
+    
+    q=[]
+    for results in results_list:
+        q.append(results[-1,:,0])
+        
+    M = np.array(q)
+
+    fig, ax = plt.subplots()
+    
+    im = ax.imshow(
+        M,
+        cmap="viridis",
+        origin="lower",
+        aspect="auto"
+    )
+    
+    ticks_x = np.linspace(0, 0.5, 6)
+    ax.set_xticks(np.linspace(0, M.shape[1] - 1, 6))
+    ax.set_xticklabels([f"{t:.1f}" for t in ticks_x])
+    
+    y_values = np.logspace(-4, 0, M.shape[0])
+    
+    ax.set_yticks(np.linspace(0, M.shape[0]-1, len(y_values)))
+    ax.set_yticklabels([f"{p:.1e}" for p in y_values])
+    
+    ax.set_xlabel(r"$r$", fontsize=18)
+    ax.set_ylabel(r"$p_r$", fontsize=18)
+    
+    ax.tick_params(axis='both', labelsize=12)
+    
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label(r"$\langle q \rangle$",fontsize=18)
+    
+    plt.savefig(directory_save+"pdf/"+name+".pdf", bbox_inches="tight")
+    plt.savefig(directory_save+"png/"+name+".png", bbox_inches="tight")
+    plt.close()
+        
     
     
 #%%
@@ -604,7 +652,7 @@ mr_rs_BA=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 2)
 mr_obd_BA=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 2)
 rn_rs_BA=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 2)
 rn_obd_BA=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 2)
-
+#%%
 #k_variability
 k_val=[10,20,30,40,50]
 obd_mr_k=[]
@@ -645,6 +693,56 @@ obd_rn_N.append(rn_obd)
 rs_rn_N.append(rn_rs)
 
 N=1000
+
+#%%
+#p_r dependence - WS
+r_values=np.arange(0.,0.5001,0.05)
+p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
+k=20
+N=1000
+N_i=1000
+obd_mr_WS_pr=[]
+rs_mr_WS_pr=[]
+obd_rn_WS_pr=[]
+rs_rn_WS_pr=[]
+for p_r in p_r_values:
+    #Watts-Strogatz
+    A=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 2, p_r=p_r)
+    rs_mr_WS_pr.append(A)
+    B=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 2, p_r=p_r)
+    obd_mr_WS_pr.append(B)
+    C=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 2, p_r=p_r)
+    rs_rn_WS_pr.append(C)
+    D=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=p_r)
+    obd_rn_WS_pr.append(D)
+ 
+#%%   
+#initial node degree order dependence - BA
+r_values=np.arange(0.,0.5001,0.01)
+BA_list=["Random","Min","Max"]
+obd_mr_BA_k=[mr_obd_BA]
+rs_mr_BA_k=[mr_rs_BA]
+obd_rn_BA_k=[rn_obd_BA]
+rs_rn_BA_k=[rn_rs_BA]
+for i in range(1,3):
+    #Watts-Strogatz
+    A=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 2, c_BA=BA_list[i])
+    rs_mr_BA_k.append(A)
+    B=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 2, c_BA=BA_list[i])
+    obd_mr_BA_k.append(B)
+    C=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 2, c_BA=BA_list[i])
+    rs_rn_BA_k.append(C)
+    D=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 2, c_BA=BA_list[i])
+    obd_rn_BA_k.append(D)
+
+#%%
+#heatmap
+
+r_values_WS=np.arange(0.,0.5001,0.05)
+heatmap(obd_mr_WS_pr[1:],r_values_WS,"heatmap_obd_mr")
+heatmap(rs_mr_WS_pr[1:],r_values_WS,"heatmap_rs_mr")
+heatmap(obd_rn_WS_pr[1:],r_values_WS,"heatmap_obd_rn")
+heatmap(rs_rn_WS_pr[1:],r_values_WS,"heatmap_rs_rn")
 
 #%%
 #Comparison of the biases' effects
@@ -720,7 +818,7 @@ biases_plots(rs_mr_k, r_values, N, N_i, k, "mr", "rs_k", k_list ,False)
 biases_plots(obd_rn_k, r_values, N, N_i, k, "rn", "obd_k", k_list ,False)
 biases_plots(rs_rn_k, r_values, N, N_i, k, "rn", "rs_k", k_list ,False)
 
-#k dependancy
+#N dependancy
 N_list=["$N=100$","$N=500$","$N=1000$"]
 
 biases_plots(obd_mr_N, r_values, N, N_i, k, "mr", "obd_N", N_list ,False)
@@ -728,6 +826,21 @@ biases_plots(rs_mr_N, r_values, N, N_i, k, "mr", "rs_N", N_list ,False)
 biases_plots(obd_rn_N, r_values, N, N_i, k, "rn", "obd_N", N_list ,False)
 biases_plots(rs_rn_N, r_values, N, N_i, k, "rn", "rs_N", N_list ,False)
 
+#%%
+r_values=np.arange(0.,0.5001,0.05)
+#pr dependency - WS
+p_r_list=["$p_r=$"+str(round(i,5)) for i in p_r_values]
+biases_plots(obd_mr_WS_pr, r_values, N, N_i, k, "mr", "obd_WS_pr", p_r_list ,False)
+biases_plots(rs_mr_WS_pr, r_values, N, N_i, k, "mr", "rs_WS_pr", p_r_list ,False)
+biases_plots(obd_rn_WS_pr, r_values, N, N_i, k, "rn", "obd_WS_pr", p_r_list ,False)
+biases_plots(rs_rn_WS_pr, r_values, N, N_i, k, "rn", "rs_WS_pr", p_r_list ,False)
+
+r_values=np.arange(0.,0.5001,0.01)
+#order degree initial node dependency
+biases_plots(obd_mr_BA_k, r_values, N, N_i, k, "mr", "obd_BA", BA_list ,False)
+biases_plots(rs_mr_BA_k, r_values, N, N_i, k, "mr", "rs_BA", BA_list ,False)
+biases_plots(obd_rn_BA_k, r_values, N, N_i, k, "rn", "obd_BA", BA_list ,False)
+biases_plots(rs_rn_BA_k, r_values, N, N_i, k, "rn", "rs_BA", BA_list ,False)
 
 
 #%%
@@ -821,6 +934,89 @@ rn_obd_q=statistics_matrix("rn", k, r_values, N, N_i, "obd", 1)
 rn_rs_d=statistics_matrix("rn", k, r_values, N, N_i, "rs", 0)
 rn_rs_q=statistics_matrix("rn", k, r_values, N, N_i, "rs", 1)
 
+#%%
+#p_r dependence - WS
+r_values=np.arange(0.,0.5001,0.05)
+p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
+k=20
+N=1000
+N_i=1000
+
+obd_mr_WS_pr_d=[]
+rs_mr_WS_pr_d=[]
+obd_rn_WS_pr_d=[]
+rs_rn_WS_pr_d=[]
+
+obd_mr_WS_pr_q=[]
+rs_mr_WS_pr_q=[]
+obd_rn_WS_pr_q=[]
+rs_rn_WS_pr_q=[]
+for p_r in p_r_values:
+    #Watts-Strogatz
+    A=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 0, p_r=p_r)
+    rs_mr_WS_pr_d.append(A)
+    A2=statistics_matrix("mr_WS", k, r_values, N, N_i, "rs", 1, p_r=p_r)
+    rs_mr_WS_pr_q.append(A2)
+    
+    B=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 0, p_r=p_r)
+    obd_mr_WS_pr_d.append(B)
+    B2=statistics_matrix("mr_WS", k, r_values, N, N_i, "obd", 1, p_r=p_r)
+    obd_mr_WS_pr_q.append(B2)
+    
+    C=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 0, p_r=p_r)
+    rs_rn_WS_pr_d.append(C)
+    C2=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 1, p_r=p_r)
+    rs_rn_WS_pr_q.append(C2)
+    
+    D=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 0, p_r=p_r)
+    obd_rn_WS_pr_d.append(D)
+    D2=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 1, p_r=p_r)
+    obd_rn_WS_pr_q.append(D2)
+ 
+    
+#initial node degree order dependence - BA
+r_values=np.arange(0.,0.5001,0.01)
+BA_list=["Random","Min","Max"]
+obd_mr_BA_k=[mr_obd_BA]
+rs_mr_BA_k=[mr_rs_BA]
+obd_rn_BA_k=[rn_obd_BA]
+rs_rn_BA_k=[rn_rs_BA]
+
+
+obd_mr_BA_k_d=[]
+rs_mr_BA_k_d=[]
+obd_rn_BA_k_d=[]
+rs_rn_BA_k_d=[]
+
+obd_mr_BA_k_q=[]
+rs_mr_BA_k_q=[]
+obd_rn_BA_k_q=[]
+rs_rn_BA_k_q=[]
+for i in range(3):
+    #Watts-Strogatz
+    A=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 0, c_BA=BA_list[i])
+    rs_mr_BA_k_d.append(A)
+    A2=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 1, c_BA=BA_list[i])
+    rs_mr_BA_k_q.append(A2)
+    
+    B=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 0, c_BA=BA_list[i])
+    obd_mr_BA_k_d.append(B)
+    B2=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 1, c_BA=BA_list[i])
+    obd_mr_BA_k_q.append(B2)
+    
+    C=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 0, c_BA=BA_list[i])
+    rs_rn_BA_k_d.append(C)
+    C2=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 1, c_BA=BA_list[i])
+    rs_rn_BA_k_q.append(C2)
+    
+    D=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 0, c_BA=BA_list[i])
+    obd_rn_BA_k_d.append(D)
+    D2=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 1, c_BA=BA_list[i])
+    obd_rn_BA_k_q.append(D2)
+
+    
+    
+    
 #Watts-Strogatz
 
 #p_r=0.001
@@ -845,6 +1041,7 @@ rn_rs_WS_2_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 1, p_r=0.01)
 rn_obd_WS_2_d=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 0, p_r=0.01)
 rn_obd_WS_2_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 1, p_r=0.01)
 
+#%%
 #Barabasi-Albert
 mr_rs_BA_d=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 0)
 mr_rs_BA_q=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 1)
@@ -855,6 +1052,7 @@ rn_rs_BA_d=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 0)
 rn_rs_BA_q=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 1)
 rn_obd_BA_d=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 0)
 rn_obd_BA_q=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 1)
+
 
 #%%
 
@@ -892,6 +1090,7 @@ for k_i in k_val:
 
 #%%
 #plots
+
 
 #comparing strategies on Erdos-Renyi
 
@@ -940,7 +1139,69 @@ temporal_evo(q_list,r_values,10,N,N_i,k,"rn_rs",network,y_label,"q")
 q_list=[rn_obd_q,rn_obd_WS_1_q,rn_obd_WS_2_q,rn_obd_BA_q]
 temporal_evo(q_list,r_values,10,N,N_i,k,"rn_obd",network,y_label,"q")
 
+
+# comparing BA
+BA_list=["Random","Min","Max"]
+
+y_label=r"$\langle d \rangle$"
+d_list=rs_mr_BA_k_d
+temporal_evo(d_list,r_values,10,N,N_i,k,"mr_rs_BA",BA_list,y_label,"d")
+
+d_list=obd_mr_BA_k_d
+temporal_evo(d_list,r_values,10,N,N_i,k,"mr_obd_BA",BA_list,y_label,"d")
+
+d_list=rs_rn_BA_k_d
+temporal_evo(d_list,r_values,10,N,N_i,k,"rn_rs_BA",BA_list,y_label,"d")
+
+d_list=obd_rn_BA_k_d
+temporal_evo(d_list,r_values,10,N,N_i,k,"rn_obd_BA",BA_list,y_label,"d")
+
+y_label=r"$\langle q_{def} \rangle$"
+q_list=rs_mr_BA_k_q
+temporal_evo(q_list,r_values,10,N,N_i,k,"mr_rs_BA",BA_list,y_label,"q")
+
+q_list=obd_mr_BA_k_q
+temporal_evo(q_list,r_values,10,N,N_i,k,"mr_obd_BA",BA_list,y_label,"q")
+
+q_list=rs_rn_BA_k_q
+temporal_evo(q_list,r_values,10,N,N_i,k,"rn_rs_BA",BA_list,y_label,"q")
+
+q_list=obd_rn_BA_k_q
+temporal_evo(q_list,r_values,10,N,N_i,k,"rn_obd_BA",BA_list,y_label,"q")
+
 #%%
+r_values=np.arange(0.,0.5001,0.05)
+# comparing WS
+p_r_list=["$p_r=$"+str(round(i,5)) for i in p_r_values]
+
+y_label=r"$\langle d \rangle$"
+d_list=rs_mr_WS_pr_d
+temporal_evo(d_list,r_values,2,N,N_i,k,"mr_rs_WS",p_r_list,y_label,"d")
+
+d_list=obd_mr_WS_pr_d
+temporal_evo(d_list,r_values,2,N,N_i,k,"mr_obd_WS",p_r_list,y_label,"d")
+
+d_list=rs_rn_WS_pr_d
+temporal_evo(d_list,r_values,2,N,N_i,k,"rn_rs_WS",p_r_list,y_label,"d")
+
+d_list=obd_rn_WS_pr_d
+temporal_evo(d_list,r_values,2,N,N_i,k,"rn_obd_WS",p_r_list,y_label,"d")
+
+y_label=r"$\langle q_{def} \rangle$"
+q_list=rs_mr_WS_pr_q
+temporal_evo(q_list,r_values,2,N,N_i,k,"mr_rs_WS",p_r_list,y_label,"q")
+
+q_list=obd_mr_WS_pr_q
+temporal_evo(q_list,r_values,2,N,N_i,k,"mr_obd_WS",p_r_list,y_label,"q")
+
+q_list=rs_rn_WS_pr_q
+temporal_evo(q_list,r_values,2,N,N_i,k,"rn_rs_WS",p_r_list,y_label,"q")
+
+q_list=obd_rn_WS_pr_q
+temporal_evo(q_list,r_values,2,N,N_i,k,"rn_obd_WS",p_r_list,y_label,"q")
+
+#%%
+r_values=np.arange(0.,0.5001,0.01)
 #comparing k on ER
 k_list=[r"$\langle k \rangle=10$",r"$\langle k \rangle=20$",
         r"$\langle k \rangle=30$",r"$\langle k \rangle=40$",
