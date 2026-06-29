@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr 22 11:42:06 2026
-
 @author: Sergi Martínez Galindo
 """
 
@@ -12,36 +10,34 @@ IMPORTANT INFORMATION BEFORE EXECUTING
     
 This program provides the code to simulate the system with different 
 exploration strategies, node definition heuristic rules and biases.
-It is important to use the corresponding strings to identify each case:
+It is important to use the corresponding strings to identify each case,
+along with the heuristic rule function indicated in parentheses:
 
 - Rule strings
     1. Majority rule
-        A. No bias: mr
-        B. Anchoring bias: mr_anchor
-        C. Ambiguity bias: mr_ambiguity
-        D. Primacy linear: mr_primacy_linear
-        E. Primacy exponential: mr_primacy_exp
-        F. Primacy power law: mr_primacy_power
-        G. Rececny linear: mr_recency_linear
-        H. Rececny exponential: mr_recency_exp
-        I. Rececny power law: mr_recency_power
+    
+        A. No bias: mr (update_majority)
+        B. Anchoring bias: mr_anchor (update_majority_anchor)
+        C. Ambiguity bias: mr_ambiguity (update_majority_ambiguity) 
+         - additional paramter M -
+        D. Primacy linear: mr_primacy_linear (update_majority_weighted)
+        E. Rececny linear: mr_recency_linear (update_majority_weighted)
+
         
     2. Random neighbour
-        A. No bias: rn
-        B. Anchoring bias: rn_anchor
-        C. Primacy linear: rn_primacy_linear
-        D. Primacy exponential: rn_primacy_exp
-        E. Primacy power law: rn_primacy_power
-        F. Rececny linear: rn_recency_linear
-        G. Rececny exponential: rn_recency_exp
-        H. Rececny power law: rn_recency_power
+        A. No bias: rn (update_rn)
+        B. Anchoring bias: rn_anchor (update_rn_anchor)
+        C. Primacy linear: rn_primacy_linear (update_rn_weighted)
+        D. Rececny linear: rn_recency_linear (update_rn_weighted)
         
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
     
 - Network topotlogy (without biases):
-    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
+    - add to mr o rn:
+        A. _WS (Watts-Strogatz) - additional parameter p_r -  
+        B. _BA (Barabasi-Albert) - additional parameter c_BA -  
 """
 
 
@@ -52,6 +48,7 @@ import numpy as np
 import scipy as sp
 from numba import njit
 import networkx as nx
+import random as random
 
 #%%
 @njit
@@ -735,10 +732,8 @@ def exploration(N,k,r,update_rule,strategy,GTN,observer_info,M,weight,rule):
         """
     
     #only for weighted biases
-    list_w_b=["mr_primacy_linear","mr_primacy_exp","mr_primacy_power",
-              "rn_primacy_linear","rn_primacy_exp","rn_primacy_power",
-              "mr_recency_linear","mr_recency_exp","mr_recency_power",
-              "rn_recency_linear","rn_recency_exp","rn_recency_power"]
+    list_w_b=["mr_primacy_linear","rn_primacy_linear",
+              "mr_recency_linear","rn_recency_linear"]
     
     w_b=False
     if rule in list_w_b:
@@ -834,6 +829,11 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,c_BA="Ra
     
     for i in range(N_i):
         np.random.seed(i+10)
+        #Reproducibility: The following line was added after my execution
+        #of the simulations, and some networkx functions use random seed
+        #instead of numpy random seed
+        random.seed(i+10) 
+        
         GTN=GTN_network(N, k, p_r)
         s,links,n_a,n_n,G=GTN
         observer_info=observer(s, links, r, n_a, n_n,GTN_network,c_BA)
@@ -866,71 +866,36 @@ def main_program(N,k,r,update_rule,N_i,rule,strategy,weight,GTN_network,c_BA="Ra
             
     np.savez_compressed(directory+name,r=results)
 
+
 #%%
+###############################################################################
+#SIMULATIONS
+###############################################################################
+
+#%%
+#1. Erdos Renyi
+
+#1.1. k=20, N=1000
 r_values=np.arange(0.,0.5001,0.01)
 k=20
 N=1000
 N_i=1000
-weight=prim_lin
-#%%
+weight=prim_lin #does not affect simulations that do not use it
 
 for r in r_values:
-    #Barabasi-Albert
-    """
-    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
-                 ground_truth_network_BA, c_BA="Min")
-    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
-                 ground_truth_network_BA, c_BA="Min")
+    main_program(N,k,r,update_majority,N_i,"mr","rs",weight,
+                 ground_truth_network_ER)
+    main_program(N,k,r,update_majority,N_i,"mr","obd",weight,
+                 ground_truth_network_ER)
     
-    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
-                 ground_truth_network_BA, c_BA="Min")
-    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
-                 ground_truth_network_BA, c_BA="Min")
-    
-    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
-                 ground_truth_network_BA, c_BA="Max")
-    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
-                 ground_truth_network_BA, c_BA="Max")
-    
-    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
-                 ground_truth_network_BA, c_BA="Max")
-    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
-                 ground_truth_network_BA, c_BA="Max")"""
-    
-#%%
-p_r=0.001
-r=0.05
-main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
-             ground_truth_network_WS,p_r=p_r)
-main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
-             ground_truth_network_WS,p_r=p_r)
+    main_program(N,k,r,update_rn,N_i,"rn","rs",weight,
+                 ground_truth_network_ER)
+    main_program(N,k,r,update_rn,N_i,"rn","obd",weight,
+                 ground_truth_network_ER)
 
-main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
-             ground_truth_network_WS,p_r=p_r)
-main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
-             ground_truth_network_WS,p_r=p_r)
 #%%
-"""r_values=np.arange(0.,0.5001,0.05)
-p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
-k=20
-N=1000
-N_i=1000
-for r in r_values:
-    for p_r in p_r_values:
-        #Watts-Strogatz
-        main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
-                     ground_truth_network_WS,p_r=p_r)
-        main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
-                     ground_truth_network_WS,p_r=p_r)
-        
-        main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
-                     ground_truth_network_WS,p_r=p_r)
-        main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
-                     ground_truth_network_WS,p_r=p_r)"""
-        
-#%%
-#k_dependency
-"""r_values=np.arange(0.47,0.5001,0.01)
+#1.2. k dependece
+r_values=np.arange(0.,0.5001,0.01)
 k_values=[10,30,40,50]
 N=1000
 N_i=1000
@@ -945,11 +910,10 @@ for r in r_values:
         main_program(N,k,r,update_rn,N_i,"rn","rs",weight,
                      ground_truth_network_ER)
         main_program(N,k,r,update_rn,N_i,"rn","obd",weight,
-                     ground_truth_network_ER)"""
-
+                     ground_truth_network_ER)
 #%%
-#N_dependency
-"""r_values=np.arange(0.23,0.5001,0.01)
+#1.3. N dependence
+r_values=np.arange(0.,0.5001,0.01)
 k=20
 N_values=[100,500]
 N_i=1000
@@ -964,7 +928,158 @@ for r in r_values:
         main_program(N,k,r,update_rn,N_i,"rn","rs",weight,
                      ground_truth_network_ER)
         main_program(N,k,r,update_rn,N_i,"rn","obd",weight,
-                     ground_truth_network_ER)"""
+                     ground_truth_network_ER)
+
+#%%
+#1.4. Biases
+r_values=np.arange(0.,0.5001,0.01)
+k=20
+N=1000
+N_i=1000
+
+for r in r_values:
+    
+    #Primacy linear
+    weight=prim_lin
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_primacy_linear","rs",
+                 weight,ground_truth_network_ER)
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_primacy_linear","obd",
+                 weight,ground_truth_network_ER)
+    
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_primacy_linear","rs",weight,
+                 ground_truth_network_ER)
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_primacy_linear","obd",weight,
+                 ground_truth_network_ER)
+    
+    #Recency linear
+    weight=rec_lin
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_recency_linear","rs",
+                 weight,ground_truth_network_ER)
+    main_program(N,k,r,update_majority_weighted,N_i,"mr_recency_linear","obd",
+                 weight,ground_truth_network_ER)
+    
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_recency_linear","rs",weight,
+                 ground_truth_network_ER)
+    main_program(N,k,r,update_rn_weighted,N_i,"rn_recency_linear","obd",weight,
+                 ground_truth_network_ER)
+    
+    #Anchoring
+    main_program(N,k,r,update_majority_anchor,N_i,"mr_anchor","rs",weight,
+                 ground_truth_network_ER)
+    main_program(N,k,r,update_majority_anchor,N_i,"mr_anchor","obd",weight,
+                 ground_truth_network_ER)
+    
+    main_program(N,k,r,update_rn_anchor,N_i,"rn_anchor","rs",weight,
+                 ground_truth_network_ER)
+    main_program(N,k,r,update_rn_anchor,N_i,"rn_anchor","obd",weight,
+                 ground_truth_network_ER)
+    
+    #Ambiguity
+    main_program(N,k,r,update_majority_ambiguity,N_i,"mr_ambiguity","rs",weight,
+                 ground_truth_network_ER, M=0.75)
+    main_program(N,k,r,update_majority_ambiguity,N_i,"mr_ambiguity","obd",weight,
+                 ground_truth_network_ER, M=0.75)
+    
+    
+#%%
+#2. Other topologies
+
+#2.1. Barabasi-Albert
+r_values=np.arange(0.,0.5001,0.01)
+k=20
+N=1000
+N_i=1000
+weight=prim_lin
+for r in r_values:
+    #Random initial node
+    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
+                 ground_truth_network_BA)
+    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
+                 ground_truth_network_BA)
+    
+    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
+                 ground_truth_network_BA)
+    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
+                 ground_truth_network_BA)
+    
+    #Minimum degree - initial node
+    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
+                 ground_truth_network_BA, c_BA="Min")
+    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
+                 ground_truth_network_BA, c_BA="Min")
+    
+    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
+                 ground_truth_network_BA, c_BA="Min")
+    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
+                 ground_truth_network_BA, c_BA="Min")
+    
+    #Maximum degree - initial node
+    main_program(N,k,r,update_majority,N_i,"mr_BA","rs",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    main_program(N,k,r,update_majority,N_i,"mr_BA","obd",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    
+    main_program(N,k,r,update_rn,N_i,"rn_BA","rs",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    main_program(N,k,r,update_rn,N_i,"rn_BA","obd",weight,
+                 ground_truth_network_BA, c_BA="Max")
+    
+#%%
+#2.1. Watts-Strogatz
+p_r=0.01
+r_values=np.arange(0.,0.5001,0.01)
+k=20
+N=1000
+N_i=1000
+weight=prim_lin
+for r in r_values:
+    main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    
+    main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    
+p_r=0.001
+r_values=np.arange(0.,0.5001,0.01)
+k=20
+N=1000
+N_i=1000
+weight=prim_lin
+for r in r_values:
+    main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    
+    main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
+                 ground_truth_network_WS,p_r=p_r)
+    main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
+                 ground_truth_network_WS,p_r=p_r)
+
+
+
+r_values_2=np.arange(0.,0.5001,0.05)
+p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
+k=20
+N=1000
+N_i=1000
+for r in r_values_2:
+    for p_r in p_r_values:
+        #Watts-Strogatz
+        main_program(N,k,r,update_majority,N_i,"mr_WS","rs",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        main_program(N,k,r,update_majority,N_i,"mr_WS","obd",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        
+        main_program(N,k,r,update_rn,N_i,"rn_WS","rs",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        main_program(N,k,r,update_rn,N_i,"rn_WS","obd",weight,
+                     ground_truth_network_WS,p_r=p_r)
+        
         
 #%%
 """
@@ -974,35 +1089,33 @@ IMPORTANT INFORMATION BEFORE EXECUTING
     
 This program provides the code to simulate the system with different 
 exploration strategies, node definition heuristic rules and biases.
-It is important to use the corresponding strings to identify each case:
+It is important to use the corresponding strings to identify each case,
+along with the heuristic rule function indicated in parentheses:
 
 - Rule strings
     1. Majority rule
-        A. No bias: mr
-        B. Anchoring bias: mr_anchor
-        C. Ambiguity bias: mr_ambiguity
-        D. Primacy linear: mr_primacy_linear
-        E. Primacy exponential: mr_primacy_exp
-        F. Primacy power law: mr_primacy_power
-        G. Rececny linear: mr_recency_linear
-        H. Rececny exponential: mr_recency_exp
-        I. Rececny power law: mr_recency_power
+    
+        A. No bias: mr (update_majority)
+        B. Anchoring bias: mr_anchor (update_majority_anchor)
+        C. Ambiguity bias: mr_ambiguity (update_majority_ambiguity) 
+         - additional paramter M -
+        D. Primacy linear: mr_primacy_linear (update_majority_weighted)
+        E. Rececny linear: mr_recency_linear (update_majority_weighted)
+
         
     2. Random neighbour
-        A. No bias: rn
-        B. Anchoring bias: rn_anchor
-        C. Primacy linear: rn_primacy_linear
-        D. Primacy exponential: rn_primacy_exp
-        E. Primacy power law: rn_primacy_power
-        F. Rececny linear: rn_recency_linear
-        G. Rececny exponential: rn_recency_exp
-        H. Rececny power law: rn_recency_power
+        A. No bias: rn (update_rn)
+        B. Anchoring bias: rn_anchor (update_rn_anchor)
+        C. Primacy linear: rn_primacy_linear (update_rn_weighted)
+        D. Rececny linear: rn_recency_linear (update_rn_weighted)     
         
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
     
 - Network topotlogy (without biases):
-    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
+    - add to mr o rn:
+        A. _WS (Watts-Strogatz) - additional parameter p_r -  
+        B. _BA (Barabasi-Albert) - additional parameter c_BA -  
 """
 

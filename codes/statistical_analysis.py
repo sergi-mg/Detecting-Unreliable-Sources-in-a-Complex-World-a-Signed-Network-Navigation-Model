@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Apr 29 11:08:43 2026
-
 @author: Sergi Martínez Galindo
 """
 
@@ -12,38 +10,36 @@ IMPORTANT INFORMATION BEFORE EXECUTING
     
 This program provides the code to analyse the results obtained with different 
 exploration strategies, node definition heuristic rules and biases.
-It is important to use the corresponding strings to identify each case:
+It is important to use the corresponding strings to identify each case,
+along with the heuristic rule function indicated in parentheses:
 
 - Rule strings
     1. Majority rule
-        A. No bias: mr
-        B. Anchoring bias: mr_anchor
-        C. Ambiguity bias: mr_ambiguity
-        D. Primacy linear: mr_primacy_linear
-        E. Primacy exponential: mr_primacy_exp
-        F. Primacy power law: mr_primacy_power
-        G. Rececny linear: mr_recency_linear
-        H. Rececny exponential: mr_recency_exp
-        I. Rececny power law: mr_recency_power
+    
+        A. No bias: mr (update_majority)
+        B. Anchoring bias: mr_anchor (update_majority_anchor)
+        C. Ambiguity bias: mr_ambiguity (update_majority_ambiguity) 
+         - additional paramter M -
+        D. Primacy linear: mr_primacy_linear (update_majority_weighted)
+        E. Rececny linear: mr_recency_linear (update_majority_weighted)
+
         
     2. Random neighbour
-        A. No bias: rn
-        B. Anchoring bias: rn_anchor
-        C. Primacy linear: rn_primacy_linear
-        D. Primacy exponential: rn_primacy_exp
-        E. Primacy power law: rn_primacy_power
-        F. Rececny linear: rn_recency_linear
-        G. Rececny exponential: rn_recency_exp
-        H. Rececny power law: rn_recency_power
+        A. No bias: rn (update_rn)
+        B. Anchoring bias: rn_anchor (update_rn_anchor)
+        C. Primacy linear: rn_primacy_linear (update_rn_weighted)
+        D. Rececny linear: rn_recency_linear (update_rn_weighted)
         
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
-    2. Random walk: rw (note that this strategy can only be used with No bias)
     
 - Network topotlogy (without biases):
-    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
+    - add to mr o rn:
+        A. _WS (Watts-Strogatz) - additional parameter p_r -  
+        B. _BA (Barabasi-Albert) - additional parameter c_BA -  
 """
+
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,19 +54,20 @@ import seaborn as sns
 @njit
 def statistics(x):
     """Returns mean and its uncertainty of a 2D array (N, N_i),
-    computed over simulations (axis=1)."""
+    computed over N_i simulations (axis=1). Returns the mean value
+    and its uncertainty (95%)."""
     
     #mean and standard deviation
     sumx=np.sum(x,axis=1)
     sumx2=np.sum(x**2,axis=1)
-    N=x.shape[1]
-    xmed=sumx/N
-    x2med=sumx2/N
-    s2=(N*(x2med-xmed**2))/(N-1)
+    N_i=x.shape[1]
+    xmed=sumx/N_i
+    x2med=sumx2/N_i
+    s2=(N_i*(x2med-xmed**2))/(N_i-1)
     s=s2**0.5
     
     #standard deviation of the mean (CLT)
-    var=s2/N
+    var=s2/N_i
     var[var<0]=0
     sigma=(var)**0.5
     unc=1.96*sigma
@@ -102,7 +99,19 @@ def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",
                       M=0,p_r=-1):
     """Reads the files for k and r (integer and 1D array) indicated and returns
     the mean and the standard deviation of the corresponding index associated
-    variable (d(t),q_def(t),q(t),d_max(t),<d>(t)) as a function of time."""
+    variable (d(t),q_def(t),q(t),d_max(t),<d>(t)) as a function of time. Input:
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - r_values: 1D array (N_r)
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - index: integer indicating the variable.
+        - c_BA: "Max", "Min", "Random", only for Ba, indicates the criteria to 
+        select the initial node.
+        - p_r: rewiring probability, only for Watts-Strogatz
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)"""
     
     directory="../data/time_evo_simulations_biases/"
     
@@ -136,9 +145,20 @@ def statistics_matrix(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",
 
     return results
 
+#individual plot
 def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy,theory):
     """Saves a plot with <q>(r) for the corresponding rule and exploration
-    strategy"""
+    strategy. Inputs:
+        - results: numpy array (N,N_r,2).
+        - r_values: 1D array (N_r)
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - theory: boolean indicating if a theoretical line (random neighbour)
+            is needed.
+        """
     
     #folder
     
@@ -176,10 +196,23 @@ def final_accuracy_plot(results,r_values,N,N_i,k,rule,strategy,theory):
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.close()
-    
+
+
+#more than one curve (not necessarly biases)    
 def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory):
     """Saves a plot with <q>(r) for the corresponding rule and exploration
-    strategy"""
+    strategy. Plots a curve for each array in the list. Inputs:
+        - results_list: list of numpy arrays (N,N_r,2).
+        - r_values: 1D array (N_r)
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - biases_list: strings with the name of each case for the legend.
+        - theory: boolean indicating if a theoretical line (random neighbour)
+            is needed.
+        """
     
     N_b=len(biases_list)
     
@@ -213,7 +246,8 @@ def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory)
     
     plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
 )
-    plt.ylim([0,1])
+    plt.ylim([-0.05,1.05])
+    plt.xlim([-0.015,0.515])
     plt.xlabel("$r$",fontsize=18)
     plt.ylabel(r"$\langle q \rangle$",fontsize=18)
     plt.xticks(fontsize=16)
@@ -221,67 +255,22 @@ def biases_plots(results_list,r_values,N,N_i,k,rule,strategy,biases_list,theory)
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.close()
-    
-def improvement_plots(reference,results_list,r_values,N,N_i,k,rule,strategy,
-                      biases_list,theory):
-    """Saves a plot with <q>(r) for the corresponding rule and exploration
-    strategy"""
-    
-    N_b=len(biases_list)
-    
-    #improvement calculus
-    values=np.zeros((len(r_values),len(results_list)))
-    unc=np.zeros_like(values)
-    eps=10**(-10)
-    for i in range(len(results_list)):
-        values[:,i]=results_list[i][-1,:,0]/(reference[-1,:,0]+eps)
-        unc[:,i]=results_list[i][-1,:,1]/(reference[-1,:,0]+eps)+\
-        reference[-1,:,1]*results_list[i][-1,:,1]/(reference[-1,:,0]+eps)**2
-        
-        values[:,i],unc[:,i]=xifres(values[:,i],unc[:,i],10,-10)
-    
-    #folder
-    
-    directory_save="../images/biases/improvement/"
-    if not exists(directory_save):
-        makedirs(directory_save)
-        
-    if not exists(directory_save+"pdf/"):
-        makedirs(directory_save+"pdf/")
-    if not exists(directory_save+"png/"):
-        makedirs(directory_save+"png/")
-        
-    name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"+str(N_i)+"_"
-        
-    #plot
-        
-    cmap=plt.get_cmap("viridis") 
-    plt.figure()
-    
-    if theory==True:
-        x=np.arange(0,0.501,0.005)
-        plt.plot(x,N**(-2.*x),c="black",label="Theoretical")
-        
-    for i in range(N_b):
-        plt.errorbar(r_values,values[:,i],xerr=0,yerr=unc[:,i],
-                     linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
-                     label=biases_list[i])
-    
-    plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
-)
-    plt.ylim([0,2])
-    plt.xlabel("$r$",fontsize=18)
-    plt.ylabel(r"$\langle q \rangle$/$\langle q_{ref} \rangle$",fontsize=18)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
-    plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
-    plt.close()
-    
+ 
+#temporal evolution   
 def temporal_evo(results_list,r_values,r_index,N,N_i,k,rule,
                  biases_list,ylabel,var):
-    """Saves a plot with <q>(r) for the corresponding rule and exploration
-    strategy"""
+    """Saves a plot with the time evolution for the indicated r_value. Inputs:
+        - results_list: list of numpy arrays (N,N_r,2).
+        - r_values: 1D array (N_r)
+        - r_index: indicates the position of the r value to plot.
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - biases_list: strings with the name of each case for the legend.
+        - ylabel: str for the ylabel.
+        - var: str for the name of the file, variable."""
     
     N_b=len(biases_list)
     r=r_values[r_index]
@@ -307,10 +296,16 @@ def temporal_evo(results_list,r_values,r_index,N,N_i,k,rule,
         
     for i in range(N_b):
         results=results_list[i]
-        plt.errorbar(np.arange(0,N)/N,results[:,r_index,0],
-                     xerr=0,yerr=results[:,r_index,1],
-                     linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
+        x=np.arange(0,N)/N
+        y=results[:,r_index,0]
+        dy=results[:,r_index,1]
+        #plt.errorbar(np.arange(0,N)/N,results[:,r_index,0],
+        #             xerr=0,yerr=results[:,r_index,1],
+        #             linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
+        #             label=biases_list[i])
+        plt.plot(x,y,linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
                      label=biases_list[i])
+        plt.fill_between(x, y-dy, y+dy, alpha=0.5, c=cmap(i/N_b))
     
     plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
 )
@@ -327,11 +322,17 @@ def temporal_evo(results_list,r_values,r_index,N,N_i,k,rule,
     plt.close()
     
 #Histogram function
-
 def histogram_program(N,N_i,k,r,rule,strategy,index):    
     """Creates a histogram for the specified noise (r), expected number
     of conncetions (k), rule and strategy for the variable corresponding
-    to index (d(t),q_def(t),q(t),d_max(t),<d>(t))."""
+    to index (d(t),q_def(t),q(t),d_max(t),<d>(t)). Input:
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - r: noise [0,0.5]
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - index: integer indicating the variable."""
     
     #reading the data file
     
@@ -389,7 +390,18 @@ def histogram(N,data,xmin,xmax,nbox):
     return vhis,errhis,xhis,h
 
 def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
-    """Plots the histogram along the mean value."""
+    """Plots the histogram along the mean value cand saves it. Input:
+        - vhis: values of each box.
+        - errhis: uncertainty associated to the values.
+        - xhis: position of the boxes.
+        - h: box width.
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - r: noise [0,0.5]
+        - mean: array with the mean value."""
     
     #folder
     directory_save="../images/biases/histograms/"
@@ -419,7 +431,7 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
                 label=f'Average value={mean:.2f}')
 
     plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
-)
+               )
     #plt.xlim([-1,1])
     plt.xlabel(r"$\langle q \rangle$",fontsize=18)
     plt.ylabel("$p$",fontsize=18)
@@ -432,9 +444,19 @@ def plot_histogram(vhis,errhis,xhis,h,N,N_i,k,rule,strategy,r,mean):
 
 def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
     """Reads the files for the indicated k and strategy and creates a box plot
-    with the N_i values for each r.
-    Strategies: Random Selection (0), Ordered by distance (1), 
-                random walk (2)."""
+    with the N_i values for each r. Input:
+        - N: number of nodes.
+        - N_i: number of simulations.
+        - k: expected number of connections per node.
+        - r_values: 1D array (N_r)
+        - rule: str of the rule.
+        - strategy: str of the strategy used.
+        - index: integer indicating the variable.
+        - c_BA: "Max", "Min", "Random", only for Ba, indicates the criteria to 
+        select the initial node.
+        - p_r: rewiring probability, only for Watts-Strogatz
+        - M: float, indicates the percentage of agreeing neighbours
+        needed to trust a node. (only for ambiguity bias if not ignored)"""
     
     directory="../data/time_evo_minimum/"
     
@@ -483,6 +505,9 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
     elif p_r!=-1:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
             +"_"+str(N_i)+"_"+str(round(p_r,5))+"_"
+    elif c_BA!="Random":
+        name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
+            +"_"+str(N_i)+"_"+c_BA
     else:
         name=rule+"_"+strategy+"_"+str(N)+"_"+str(k)+"_"\
             +"_"+str(N_i)+"_"
@@ -503,7 +528,7 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
         linestyle='none'   # sin líneas
     ), medianprops=dict(
         color=cmap(0.67),      # color de la mediana
-        linewidth=2       # grosor opcional
+        linewidth=2      # grosor opcional
     )
     )
     
@@ -519,8 +544,6 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
            markerfacecolor=cmap(0), markersize=5)
     ]
     
-    ax.legend(handles=legend_elements,fontsize=18)
-    
     ax.set_xlim(0, 0.501)
     ax.set_ylim(-1,1)
     ticks = np.arange(0, 0.51, 0.1)
@@ -531,12 +554,19 @@ def box_plot(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
     ax.set_xlabel(r"$r$",fontsize=18)
     ax.set_ylabel(r"$\langle q \rangle$",fontsize=18)
     
+    plt.legend(handles=legend_elements,fontsize=18,loc='lower center',
+               bbox_to_anchor=(0.5, 1.02),ncol=2)
+    
     plt.savefig(directory_save+"pdf/"+name+".pdf",bbox_inches="tight")
     plt.savefig(directory_save+"png/"+name+".png",bbox_inches="tight")
     plt.show()
     plt.close()
     
 def heatmap(results_list,r_values,name):
+    """Creates the heatmapo for the Watts-strogatz networks. Inputs:
+        - r_values: 1D array (N_r)
+        - results_list: list of numpy arrays (N,N_r,2).
+        - name: str, saving file name (without .pdf or .png)"""
     
     directory_save="../images/biases/heatmaps/"
     if not exists(directory_save):
@@ -652,7 +682,7 @@ mr_rs_BA=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 2)
 mr_obd_BA=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 2)
 rn_rs_BA=statistics_matrix("rn_BA", k, r_values, N, N_i, "rs", 2)
 rn_obd_BA=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 2)
-#%%
+
 #k_variability
 k_val=[10,20,30,40,50]
 obd_mr_k=[]
@@ -669,7 +699,7 @@ for k in k_val:
     D=statistics_matrix("rn", k, r_values, N, N_i, "obd", 2)
     obd_rn_k.append(D)
 
-k=20
+k=20 #return to original value
 #N_variability
 N_val=[100,500]
 obd_mr_N=[]
@@ -692,7 +722,7 @@ rs_mr_N.append(mr_rs)
 obd_rn_N.append(rn_obd)
 rs_rn_N.append(rn_rs)
 
-N=1000
+N=1000 #return to original value
 
 #%%
 #p_r dependence - WS
@@ -715,17 +745,16 @@ for p_r in p_r_values:
     rs_rn_WS_pr.append(C)
     D=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=p_r)
     obd_rn_WS_pr.append(D)
- 
+
+r_values=np.arange(0.,0.5001,0.01) #return to original value
 #%%   
 #initial node degree order dependence - BA
-r_values=np.arange(0.,0.5001,0.01)
 BA_list=["Random","Min","Max"]
 obd_mr_BA_k=[mr_obd_BA]
 rs_mr_BA_k=[mr_rs_BA]
 obd_rn_BA_k=[rn_obd_BA]
 rs_rn_BA_k=[rn_rs_BA]
 for i in range(1,3):
-    #Watts-Strogatz
     A=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 2, c_BA=BA_list[i])
     rs_mr_BA_k.append(A)
     B=statistics_matrix("mr_BA", k, r_values, N, N_i, "obd", 2, c_BA=BA_list[i])
@@ -745,7 +774,13 @@ heatmap(obd_rn_WS_pr[1:],r_values_WS,"heatmap_obd_rn")
 heatmap(rs_rn_WS_pr[1:],r_values_WS,"heatmap_rs_rn")
 
 #%%
-#Comparison of the biases' effects
+#Comparison of different cases
+
+#compare rules
+mr_rs_list=[mr_rs,rn_rs]
+mr_rs_bias=["Majority Rule", "Random Neighbour"]
+
+biases_plots(mr_rs_list, r_values, N, N_i, k, "rules", "rs", mr_rs_bias,False)
 
 #majority rule - random selection
 
@@ -754,8 +789,7 @@ mr_rs_bias=["Without bias", "Ambiguity effect" ,"Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(mr_rs_list, r_values, N, N_i, k, "mr", "rs", mr_rs_bias,False)
-improvement_plots(mr_rs_list[0],mr_rs_list[1:], r_values, N, N_i, k, "mr", "rs",
-                  mr_rs_bias[1:],False)
+
 
 #majority rule - ordered by distance
 
@@ -764,8 +798,7 @@ mr_obd_bias=["Without bias", "Ambiguity effect" ,"Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(mr_obd_list, r_values, N, N_i, k, "mr", "obd", mr_obd_bias,False)
-improvement_plots(mr_obd_list[0],mr_obd_list[1:], r_values, N, N_i, k, "mr", "obd",
-                  mr_obd_bias[1:],False)
+
 
 #random neighbour - random selection
 
@@ -774,8 +807,7 @@ rn_rs_bias=["Without bias","Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(rn_rs_list, r_values, N, N_i, k, "rn", "rs", rn_rs_bias,True)
-improvement_plots(rn_rs_list[0],rn_rs_list[1:], r_values, N, N_i, k, "rn", "rs",
-                  rn_rs_bias[1:],False)
+
 
 #random neighbour - ordered by distance
 
@@ -784,8 +816,7 @@ rn_obd_bias=["Without bias","Anchoring",\
             "Primacy bias", "Recency bias"]
 
 biases_plots(rn_obd_list, r_values, N, N_i, k, "rn", "obd", rn_obd_bias,True)
-improvement_plots(rn_obd_list[0],rn_obd_list[1:], r_values, N, N_i, k, "rn", "obd",
-                  rn_obd_bias[1:],False)
+
 
 #percentage threshold dependance in the ambiguity effect
 names=["Without bias","$M=60\%$","$M=70\%$","$M=80\%$","$M=90\%$"]
@@ -826,7 +857,7 @@ biases_plots(rs_mr_N, r_values, N, N_i, k, "mr", "rs_N", N_list ,False)
 biases_plots(obd_rn_N, r_values, N, N_i, k, "rn", "obd_N", N_list ,False)
 biases_plots(rs_rn_N, r_values, N, N_i, k, "rn", "rs_N", N_list ,False)
 
-#%%
+
 r_values=np.arange(0.,0.5001,0.05)
 #pr dependency - WS
 p_r_list=["$p_r=$"+str(round(i,5)) for i in p_r_values]
@@ -883,15 +914,29 @@ box_plot("mr_WS", k, r_values, N, N_i, "obd", 2, p_r=0.01)
 box_plot("rn_WS", k, r_values, N, N_i, "rs", 2, p_r=0.01)
 box_plot("rn_WS", k, r_values, N, N_i, "obd", 2, p_r=0.01)
 
-#Barabasi-Albert
+
+#Barabasi-Albert - Random
 box_plot("mr_BA", k, r_values, N, N_i, "rs", 2)
 box_plot("mr_BA", k, r_values, N, N_i, "obd", 2)
 box_plot("rn_BA", k, r_values, N, N_i, "rs", 2)
 box_plot("rn_BA", k, r_values, N, N_i, "obd", 2)
 
+
+#Barabasi-Albert - Max
+box_plot("mr_BA", k, r_values, N, N_i, "rs", 2, c_BA="Max")
+box_plot("mr_BA", k, r_values, N, N_i, "obd", 2, c_BA="Max")
+box_plot("rn_BA", k, r_values, N, N_i, "rs", 2, c_BA="Max")
+box_plot("rn_BA", k, r_values, N, N_i, "obd", 2, c_BA="Max")
+
+#Barabasi-Albert - Min
+box_plot("mr_BA", k, r_values, N, N_i, "rs", 2, c_BA="Min")
+box_plot("mr_BA", k, r_values, N, N_i, "obd", 2, c_BA="Min")
+box_plot("rn_BA", k, r_values, N, N_i, "rs", 2, c_BA="Min")
+box_plot("rn_BA", k, r_values, N, N_i, "obd", 2, c_BA="Min")
+
 #%%
 #histograms
-r_hist=[0.05,0.25,0.45]
+r_hist=[0.1,0.25,0.4]
 for r in r_hist:
     
     #majority rule - random selection
@@ -934,7 +979,7 @@ rn_obd_q=statistics_matrix("rn", k, r_values, N, N_i, "obd", 1)
 rn_rs_d=statistics_matrix("rn", k, r_values, N, N_i, "rs", 0)
 rn_rs_q=statistics_matrix("rn", k, r_values, N, N_i, "rs", 1)
 
-#%%
+
 #p_r dependence - WS
 r_values=np.arange(0.,0.5001,0.05)
 p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
@@ -1041,7 +1086,7 @@ rn_rs_WS_2_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "rs", 1, p_r=0.01)
 rn_obd_WS_2_d=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 0, p_r=0.01)
 rn_obd_WS_2_q=statistics_matrix("rn_WS", k, r_values, N, N_i, "obd", 1, p_r=0.01)
 
-#%%
+
 #Barabasi-Albert
 mr_rs_BA_d=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 0)
 mr_rs_BA_q=statistics_matrix("mr_BA", k, r_values, N, N_i, "rs", 1)
@@ -1054,7 +1099,6 @@ rn_obd_BA_d=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 0)
 rn_obd_BA_q=statistics_matrix("rn_BA", k, r_values, N, N_i, "obd", 1)
 
 
-#%%
 
 #k_dependency
 
@@ -1169,7 +1213,7 @@ temporal_evo(q_list,r_values,10,N,N_i,k,"rn_rs_BA",BA_list,y_label,"q")
 q_list=obd_rn_BA_k_q
 temporal_evo(q_list,r_values,10,N,N_i,k,"rn_obd_BA",BA_list,y_label,"q")
 
-#%%
+
 r_values=np.arange(0.,0.5001,0.05)
 # comparing WS
 p_r_list=["$p_r=$"+str(round(i,5)) for i in p_r_values]
@@ -1200,7 +1244,7 @@ temporal_evo(q_list,r_values,2,N,N_i,k,"rn_rs_WS",p_r_list,y_label,"q")
 q_list=obd_rn_WS_pr_q
 temporal_evo(q_list,r_values,2,N,N_i,k,"rn_obd_WS",p_r_list,y_label,"q")
 
-#%%
+
 r_values=np.arange(0.,0.5001,0.01)
 #comparing k on ER
 k_list=[r"$\langle k \rangle=10$",r"$\langle k \rangle=20$",
@@ -1236,35 +1280,32 @@ IMPORTANT INFORMATION BEFORE EXECUTING
     
 This program provides the code to analyse the results obtained with different 
 exploration strategies, node definition heuristic rules and biases.
-It is important to use the corresponding strings to identify each case:
+It is important to use the corresponding strings to identify each case,
+along with the heuristic rule function indicated in parentheses:
 
 - Rule strings
     1. Majority rule
-        A. No bias: mr
-        B. Anchoring bias: mr_anchor
-        C. Ambiguity bias: mr_ambiguity
-        D. Primacy linear: mr_primacy_linear
-        E. Primacy exponential: mr_primacy_exp
-        F. Primacy power law: mr_primacy_power
-        G. Rececny linear: mr_recency_linear
-        H. Rececny exponential: mr_recency_exp
-        I. Rececny power law: mr_recency_power
+    
+        A. No bias: mr (update_majority)
+        B. Anchoring bias: mr_anchor (update_majority_anchor)
+        C. Ambiguity bias: mr_ambiguity (update_majority_ambiguity) 
+         - additional paramter M -
+        D. Primacy linear: mr_primacy_linear (update_majority_weighted)
+        E. Rececny linear: mr_recency_linear (update_majority_weighted)
+
         
     2. Random neighbour
-        A. No bias: rn
-        B. Anchoring bias: rn_anchor
-        C. Primacy linear: rn_primacy_linear
-        D. Primacy exponential: rn_primacy_exp
-        E. Primacy power law: rn_primacy_power
-        F. Rececny linear: rn_recency_linear
-        G. Rececny exponential: rn_recency_exp
-        H. Rececny power law: rn_recency_power
+        A. No bias: rn (update_rn)
+        B. Anchoring bias: rn_anchor (update_rn_anchor)
+        C. Primacy linear: rn_primacy_linear (update_rn_weighted)
+        D. Rececny linear: rn_recency_linear (update_rn_weighted)
         
 - Strategy strings:
     1. Random selection: rs
     2. Ordered by distance: obd
-    2. Random walk: rw (note that this strategy can only be used with No bias)
     
 - Network topotlogy (without biases):
-    add _WS (Watts-Strogatz) or _BA (Barabasi-Albert) to mr o rn
+    - add to mr o rn:
+        A. _WS (Watts-Strogatz) - additional parameter p_r -  
+        B. _BA (Barabasi-Albert) - additional parameter c_BA -  
 """
