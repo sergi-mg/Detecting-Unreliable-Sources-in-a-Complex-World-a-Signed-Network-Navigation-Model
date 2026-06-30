@@ -210,15 +210,15 @@ __marimo__/
 .DS_Store
 **/.DS_Store
 
-# data folders and files
+# Data folders and files
 data/
 *.dat
 
-#images
+# Images
 images/
 *.pdf
 *.png
 
-#papers
+# Papers
 used_bibliography/
 
