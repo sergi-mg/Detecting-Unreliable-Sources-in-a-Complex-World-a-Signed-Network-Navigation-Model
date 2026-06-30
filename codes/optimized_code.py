@@ -8,8 +8,10 @@
 IMPORTANT INFORMATION BEFORE EXECUTING
 #######################################
     
-This program provides the code to simulate the system with different 
-exploration strategies, node definition heuristic rules and biases.
+This script contains the code used to simulate the system using different 
+exploration strategies, node definition heuristic rules, network topologies, 
+and biases.
+
 It is important to use the corresponding strings to identify each case,
 along with the heuristic rule function indicated in parentheses:
 
@@ -1081,41 +1083,5 @@ for r in r_values_2:
                      ground_truth_network_WS,p_r=p_r)
         
         
-#%%
-"""
-#######################################
-IMPORTANT INFORMATION BEFORE EXECUTING
-#######################################
-    
-This program provides the code to simulate the system with different 
-exploration strategies, node definition heuristic rules and biases.
-It is important to use the corresponding strings to identify each case,
-along with the heuristic rule function indicated in parentheses:
 
-- Rule strings
-    1. Majority rule
-    
-        A. No bias: mr (update_majority)
-        B. Anchoring bias: mr_anchor (update_majority_anchor)
-        C. Ambiguity bias: mr_ambiguity (update_majority_ambiguity) 
-         - additional paramter M -
-        D. Primacy linear: mr_primacy_linear (update_majority_weighted)
-        E. Rececny linear: mr_recency_linear (update_majority_weighted)
-
-        
-    2. Random neighbour
-        A. No bias: rn (update_rn)
-        B. Anchoring bias: rn_anchor (update_rn_anchor)
-        C. Primacy linear: rn_primacy_linear (update_rn_weighted)
-        D. Rececny linear: rn_recency_linear (update_rn_weighted)     
-        
-- Strategy strings:
-    1. Random selection: rs
-    2. Ordered by distance: obd
-    
-- Network topotlogy (without biases):
-    - add to mr o rn:
-        A. _WS (Watts-Strogatz) - additional parameter p_r -  
-        B. _BA (Barabasi-Albert) - additional parameter c_BA -  
-"""
 

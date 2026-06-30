@@ -8,8 +8,9 @@
 IMPORTANT INFORMATION BEFORE EXECUTING
 #######################################
     
-This program provides the code to create the plots used in the memory with 
-different exploration strategies, node definition heuristic rules and biases.
+This script contains the code used to create the
+figures displayed in the report.
+ 
 It is important to use the corresponding strings to identify each case,
 along with the heuristic rule function indicated in parentheses:
 
@@ -44,11 +45,9 @@ along with the heuristic rule function indicated in parentheses:
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
 from numba import njit
 from os.path import exists
 from os import makedirs
-import seaborn as sns
 
 #%%
 @njit

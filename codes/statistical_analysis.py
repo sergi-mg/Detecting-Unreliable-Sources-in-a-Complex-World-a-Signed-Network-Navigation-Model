@@ -8,8 +8,10 @@
 IMPORTANT INFORMATION BEFORE EXECUTING
 #######################################
     
-This program provides the code to analyse the results obtained with different 
+This script contains the code used to create all the plots used to 
+analyse the obtained results obtained when using different 
 exploration strategies, node definition heuristic rules and biases.
+
 It is important to use the corresponding strings to identify each case,
 along with the heuristic rule function indicated in parentheses:
 
@@ -43,11 +45,9 @@ along with the heuristic rule function indicated in parentheses:
 
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy as sp
 from numba import njit
 from os.path import exists
 from os import makedirs
-import seaborn as sns
 
 
 #%%
@@ -1272,40 +1272,4 @@ temporal_evo(rs_rn_k_q,r_values,10,N,N_i,k,"rn_rs_k",k_list,y_label,"q")
 temporal_evo(obd_rn_k_q,r_values,10,N,N_i,k,"rn_obd_k",k_list,y_label,"q")
 
 
-#%%
-"""
-#######################################
-IMPORTANT INFORMATION BEFORE EXECUTING
-#######################################
-    
-This program provides the code to analyse the results obtained with different 
-exploration strategies, node definition heuristic rules and biases.
-It is important to use the corresponding strings to identify each case,
-along with the heuristic rule function indicated in parentheses:
 
-- Rule strings
-    1. Majority rule
-    
-        A. No bias: mr (update_majority)
-        B. Anchoring bias: mr_anchor (update_majority_anchor)
-        C. Ambiguity bias: mr_ambiguity (update_majority_ambiguity) 
-         - additional paramter M -
-        D. Primacy linear: mr_primacy_linear (update_majority_weighted)
-        E. Rececny linear: mr_recency_linear (update_majority_weighted)
-
-        
-    2. Random neighbour
-        A. No bias: rn (update_rn)
-        B. Anchoring bias: rn_anchor (update_rn_anchor)
-        C. Primacy linear: rn_primacy_linear (update_rn_weighted)
-        D. Rececny linear: rn_recency_linear (update_rn_weighted)
-        
-- Strategy strings:
-    1. Random selection: rs
-    2. Ordered by distance: obd
-    
-- Network topotlogy (without biases):
-    - add to mr o rn:
-        A. _WS (Watts-Strogatz) - additional parameter p_r -  
-        B. _BA (Barabasi-Albert) - additional parameter c_BA -  
-"""
