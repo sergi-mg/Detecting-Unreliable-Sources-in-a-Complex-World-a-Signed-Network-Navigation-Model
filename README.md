@@ -36,7 +36,7 @@ The rest of the functions are internal, and their documentation can be found in 
 main_program(N, k, r, update_rule, N_i, rule, strategy, weight, GTN_network,
              c_BA="Random", M=0, p_r=-1)
 ```
-where `N` is the number of nodes, `k` is the expected number of connections per node, and `r` is the noise value ($\in[0,0.5]$). The weight function must always be provided as an input, but it will only be used when the rule string corresponds to an order bias.
+where `N` is the number of nodes, `k` is the expected number of connections per node, `r` is the noise value ($\in[0,0.5]$), and `N_i` is the number of simulations. The weight function must always be provided as an input, but it will only be used when the rule string corresponds to an order bias.
 
 The heuristic rule is selected using the `rule` and `update_rule` parameters.
 
