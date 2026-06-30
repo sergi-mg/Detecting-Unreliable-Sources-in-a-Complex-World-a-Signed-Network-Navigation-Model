@@ -2,12 +2,23 @@
 
 This repository contains the code developed as part of my Master's thesis, *Detecting Unreliable Sources in a Complex World: a Signed-Network Navigation Model*, completed as part of the Master's Degree in Complex Systems and Biophysics at the University of Barcelona.
 
+## Requirements
+
+The code was developed using Python 3.13.5 and requires the following Python libraries:
+
+- Matplotlib
+- NetworkX
+- Numba
+- NumPy
+- SciPy
+
+  
 ## Repository Structure
 
 This repository contains a single folder with the three Python scripts developed as part of the thesis. 
-Additionally, other folders may be generated when running the code, as described below. Note that, since 
+Additionally, other folders may be generated when running the code, as described below. These folders are included in the `.gitignore` file, so they will only appear locally. Note that, since 
 the code was progressively developed and reused throughout the thesis, some file, folder, or function names 
-may not fully describe their current content. This mainly occurs in the statistical_analysis.py script, which was used throughout the development of the project to generate figures for analysing the results, and does not affect the functionality of the code.
+may not fully describe their current content. However, this does not affect the functionality of the code. This issue mainly occurs in the `statistical_analysis.py` script, which was used throughout the development of the project to generate figures for analysing the results.
 
 ### Code Folder
 
@@ -15,8 +26,8 @@ This folder contains the three different scripts developed:
 
 #### optimized_code.py
 
-This script contains the code used to simulate the system using different 
-exploration strategies, node definition heuristic rules, and biases.
+This script contains the code used to simulate the system using different
+exploration strategies, node definition heuristic rules, network topologies, and biases.
 The corresponding strings must be used to identify each case. 
 The following function is used to run the simulations and save the data.
 The rest of the functions are internal, and their documentation can be found in the script.
