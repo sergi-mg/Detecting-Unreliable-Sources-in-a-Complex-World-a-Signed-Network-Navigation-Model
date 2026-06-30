@@ -502,7 +502,7 @@ results_list_1=[mr_rs_d,mr_obd_d]
 results_list_2=[mr_rs_q,mr_obd_q]
 r_l=[results_list_1,results_list_2,results_list_2,results_list_2]
 N_b=len(biases_list)
-ymin=[0.3,0.03,0.001]
+ymin=[0.38,0.06,0.001]
 ymax=[1,1,1]
 
 #plot
@@ -1038,7 +1038,7 @@ results_list_1=[BA_rand_obd_d,BA_max_obd_d]
 results_list_2=[BA_rand_obd_q,BA_max_obd_q]
 r_l=[results_list_1,results_list_2,results_list_2,results_list_2]
 N_b=len(biases_list)
-ymin=[0.6,0.03,0.001]
+ymin=[0.67,0.03,0.001]
 ymax=[1,1,1]
 
 #plot
@@ -1236,6 +1236,7 @@ for j in range(2):
         ax[j].set_title("(a)", y=-0.3, fontsize=20)
     else:
         ax[j].set_title("(b)", y=-0.3, fontsize=20)
+        ax[j].set_ylim([0.5,1])
 
 
 # colorbar
@@ -1415,7 +1416,7 @@ results_list_1=[mr_obd_d,mr_obd_p_d,mr_obd_r_d]
 results_list_2=[mr_obd_q,mr_obd_p_q,mr_obd_r_q]
 r_l=[results_list_1,results_list_2,results_list_2,results_list_2]
 N_b=len(biases_list)
-ymin=[0.5,0.03,0.001]
+ymin=[0.55,0.03,0.001]
 ymax=[1,1,1]
 
 #plot
