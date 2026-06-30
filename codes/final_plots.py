@@ -160,8 +160,7 @@ def raw_data(rule,k,r_values,N,N_i,strategy,index,c_BA="Random",M=0,p_r=-1):
         - p_r: rewiring probability, only for Watts-Strogatz
         - M: float, indicates the percentage of agreeing neighbours
         needed to trust a node. (only for ambiguity bias if not ignored)"""
-    
-    directory="../data/time_evo_minimum/"
+
     
     directory="../data/time_evo_simulations_biases/"
     
@@ -1460,4 +1459,174 @@ plt.savefig(directory_save+name+".pdf",bbox_inches="tight")
 plt.show()
 
 
+#%%
+#------------------------------------------------------------------------------
+#Fig 17
+#------------------------------------------------------------------------------
+#Watts-Strogatz network characteristics
+#Here we need to generate the data (results are not instantaneous)
 
+
+#%%
+#Functions and libraries needed
+
+import matplotlib.pyplot as plt
+import numpy as np
+from numba import njit
+from os.path import exists
+from os import makedirs
+import networkx as nx
+
+def G_to_DV(G):
+    
+    """Returns the degree 1D array D, and the neighbouring nodes 1D array V
+    given the netwrokx graph G. Neighbour of node i are:
+        V[np.sum(D[:i]):np.sum(D[:i+1])]. """
+
+    #change of saving structure: vector and pointer
+    D=np.array(list(dict(G.degree()).values()))
+    N=np.size(D)
+
+    V_list=[]
+    for i in G.nodes:
+        neighbours=G.adj[i].keys()
+        for n in neighbours:
+            V_list.append(n)
+
+    V=np.array(V_list,dtype=int)
+
+    return D,V
+
+def av_clustering_coefficient(G,D):
+    """Returns the average clustering coefficient given the networkx graph G
+    and the degree 1D array D."""
+    k_hist = nx.degree_histogram(G)
+    k_values = np.arange(1, len(k_hist))
+    k_hist = k_hist[1:]
+
+    Pk = np.array(k_hist) / np.sum(k_hist)
+    N=G.number_of_nodes()
+    #triangles in each node
+    triangles = nx.triangles(G)
+    T=np.array(list(triangles.values()))
+    n_pairs=D*(D-1)/2
+    ci=np.zeros_like(T, dtype=float)
+    mask=n_pairs>0
+    ci[mask]=T[mask]/n_pairs[mask]
+
+    C=np.mean(ci)
+
+    return C
+
+def characteristic_path_length(G):
+    
+    """Returns the characteristic path length given the netwrokx graph G."""
+
+    distances = dict(nx.all_pairs_shortest_path_length(G))
+
+    total_distance = 0
+    N = G.number_of_nodes()
+
+    for i in distances:
+        for j in distances[i]:
+            if i != j:
+                total_distance += distances[i][j]
+
+    L = total_distance / (N*(N-1))
+
+    return L
+
+#%%
+#simulations (Network generation)
+N=1000
+k=20
+# data: lista de 100 realizaciones
+# cada elemento: (k_list, V_list)
+
+c_ws_p=[]
+L_ws_p=[]
+dc_ws_p=[]
+dL_ws_p=[]
+
+
+p_r_values=np.concatenate(([0], np.logspace(-4, 0, 10)))
+
+for p in p_r_values:
+    c_WS=[]
+    L_WS=[]
+    #100 simulations
+    for i in range(100):
+        G=nx.connected_watts_strogatz_graph(N, k, p, seed=i)
+        D,V=G_to_DV(G)
+        c_WS.append(av_clustering_coefficient(G,D))
+        L_WS.append(characteristic_path_length(G))
+    
+    #average the results
+    c_WS=np.array(c_WS)
+    L_WS=np.array(L_WS)
+
+    c_ws_p.append(np.mean(c_WS))
+    L_ws_p.append(np.mean(L_WS))
+    dc_ws_p.append(1.96*np.std(c_WS, ddof=1)/np.sqrt(len(c_WS)))
+    dL_ws_p.append(1.96*np.std(L_WS, ddof=1)/np.sqrt(len(L_WS)))
+
+c_ws_p_2=c_ws_p.copy()
+c_ws_p=np.array(c_ws_p)/c_ws_p[0] 
+L_ws_p_2=L_ws_p.copy() 
+L_ws_p=np.array(L_ws_p)/L_ws_p[0]  
+
+dc_ws_p_n=np.sqrt((dc_ws_p[:]/c_ws_p_2[0])**2+\
+                  (dc_ws_p[0]*(c_ws_p[:]/c_ws_p_2[0])**2)**2)
+dL_ws_p_n=np.sqrt((dL_ws_p[:]/L_ws_p_2[0])**2+\
+                  (dL_ws_p[0]*(L_ws_p[:]/L_ws_p_2[0])**2)**2)
+
+print("L(0)=",L_ws_p_2[0])
+print("C(0)=",c_ws_p_2[0])
+
+#%%
+cmap = plt.get_cmap("viridis")
+plt.figure(figsize=(7,5))
+
+plt.errorbar(
+    p_r_values[1:], c_ws_p[1:],
+    xerr=0,
+    yerr=dc_ws_p_n[1:],
+    linestyle="--",
+    marker="o",
+    markersize=2,
+    c=cmap(0/2),
+    label=r"$C(p_r)/C(0)$"
+)
+
+plt.errorbar(
+    p_r_values[1:], L_ws_p[1:],
+    xerr=0,
+    yerr=dL_ws_p_n[1:],
+    linestyle="--",
+    marker="o",
+    markersize=2,
+    c=cmap(1/2),
+    label=r"$L(p_r)/L(0)$"
+)
+
+plt.legend(
+    fontsize=18,
+    loc='lower center',
+    bbox_to_anchor=(0.5, 1.05),
+    ncol=2
+)
+
+plt.xscale("log")
+
+plt.xlabel(r"$p_r$", fontsize=18)
+plt.ylabel("Normalized value", fontsize=18)
+plt.xticks(fontsize=16)
+plt.yticks(fontsize=16)
+
+plt.xlim([10**-4-0.00001,1+0.1])
+plt.ylim(-0.025,1.025)
+
+
+name="WS"
+plt.savefig(directory_save+name+".pdf",bbox_inches="tight")
+plt.show()

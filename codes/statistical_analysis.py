@@ -305,7 +305,7 @@ def temporal_evo(results_list,r_values,r_index,N,N_i,k,rule,
         #             label=biases_list[i])
         plt.plot(x,y,linestyle="none",marker="o",markersize=2,c=cmap(i/N_b),
                      label=biases_list[i])
-        plt.fill_between(x, y-dy, y+dy, alpha=0.5, c=cmap(i/N_b))
+        plt.fill_between(x, y-dy, y+dy, alpha=0.5, color=cmap(i/N_b))
     
     plt.legend(fontsize=18,loc='lower center',bbox_to_anchor=(0.5, 1.02),ncol=2
 )
