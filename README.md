@@ -87,8 +87,8 @@ If additional parameters are needed, they will be added at the end of the name (
 
 #### statistical_analysis.py
 
-This script contains the code used to create all the plots used to analyse the obtained results. The generated figures are saved in a new folder called `images/biases/`. For each plot type, an additional folder inside the biases one will be created (see the code for the detailed implementation). Each of those folders contains the folders `pdf/` and `png/` since the plots are saved in two different file formats. As before, the name of each plot is created using information regarding the corresponding parameters (see the code for the detailed implementation).
+This script contains the code used to generate all the plots used to analyse the obtained results. The generated figures are saved in a new folder called `images/biases/`. For each plot type, an additional folder inside the `biases` one will be created (see the code for the detailed implementation). Each of those folders contains the folders `pdf/` and `png/` since the plots are saved in two different file formats. As before, the name of each plot is created using information regarding the corresponding parameters (see the code for the detailed implementation).
 
 #### final_plots.py
 
-This script contains the code used to create the figures displayed in the report. All figures will be saved in `.pdf` format in the folder: `images/final_plots/pdf/`. 
+This script contains the code used to create the figures displayed in the report. All figures will be saved in `.pdf` format in the folder: `images/final_plots/pdf/`. The filenames are defined directly in the code.
