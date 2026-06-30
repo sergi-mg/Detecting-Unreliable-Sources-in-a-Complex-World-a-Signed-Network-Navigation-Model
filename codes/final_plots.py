@@ -1539,8 +1539,6 @@ def characteristic_path_length(G):
 #simulations (Network generation)
 N=1000
 k=20
-# data: lista de 100 realizaciones
-# cada elemento: (k_list, V_list)
 
 c_ws_p=[]
 L_ws_p=[]
